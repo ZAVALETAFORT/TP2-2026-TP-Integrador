@@ -83,6 +83,7 @@ flowchart TD
 Se puede usar como persistencia **RAM o SQLite**
 
 
+
 ### 2.2. Servidor y carpetas
 
 Uso de **JavaScript con ES Modules, Node.js y Express**. `index.js` solo configurará e iniciará el servidor con el router que entrega el Container.
@@ -102,6 +103,7 @@ errors/         # AppError
 
 Los archivos de eventos, conexión y seguridad se agregarán cuando hagan falta, sin crear carpetas vacías de entrada.
 
+
 ### 2.3. CRUD y login
 
 **Usuario, Pelicula y Reserva** tendrán CRUD: listar, buscar por ID, crear, actualizar y eliminar (`GET`, `POST`, `PUT`, `DELETE`).
@@ -110,11 +112,13 @@ Para el cliente, **cancelar** una reserva cambia su estado a `cancelada`; borrar
 
 Uso de **bcrypt** para guardar contraseñas como hash y **JWT** para identificar al usuario. Habrá dos roles: `cliente` y `admin`. El registro público siempre crea clientes; el admin inicial se configurará al arrancar la API.
 
+
 ### 2.4. Validaciones y errores
 
 Uso de **Zod** para validar `body`, `params` y `query`. Los errores de negocio se manejarán con `AppError`, un `errorHandler` general y `notFound` para rutas inexistentes.
 
 La API responderá con códigos HTTP adecuados (`200`, `201`, `204`, `400`, `401`, `403`, `404`, `409` y `500`) y errores con un formato consistente.
+
 
 ### 2.5. Persistencia
 
@@ -136,9 +140,11 @@ Uso de **EventEmitter** para un evento sencillo:
 
 Si falla la notificación, la reserva debe seguir confirmada. Por ahora no necesitamos enviar emails ni guardar notificaciones en archivos.
 
+
 ### 2.7. Documentación
 
 La API se documentará con **OpenAPI 3 y Swagger UI** en `/api-docs`, incluyendo endpoints, datos de entrada, respuestas y errores. Desde ahí podremos probar tanto el modo memoria como SQLite. [Esto lo veo en la prox clase]
+
 
 ### 2.8. Instalación
 
