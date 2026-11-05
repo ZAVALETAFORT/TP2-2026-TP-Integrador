@@ -1,13 +1,21 @@
 import express from "express";
 
-const app = express();
+// Importo las rutas y los middlewars 
+import routes from "./routes/routes.js";
+import logger from "./middlewares/logger.js";
+import notFound from "./middlewares/notFound.js";
 
+const app = express();
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+// Middlewares
+app.use(logger); // Middleware de logging
+app.use(routes); // Rutas de la API
+app.use(notFound); // Middleware para manejar rutas no encontradas
+
+
+app.listen(8080, () => {
+  console.log("Puerto 8080");
 });
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+//me quede en fase1 - parte 2: Continuar de aca Cr
