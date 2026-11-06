@@ -17,5 +17,3 @@ app.use(notFound); // Middleware para manejar rutas no encontradas
 app.listen(8080, () => {
   console.log("Puerto 8080");
 });
-
-//me quede en fase1 - parte 2: Continuar de aca Cr
