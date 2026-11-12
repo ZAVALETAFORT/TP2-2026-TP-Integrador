@@ -19,6 +19,7 @@
     "dev": "node --watch ."
   },
   "dependencies": {
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
   }
 }

@@ -1,7 +1,7 @@
 //Hereda de clase Error de javaScript
-class AppError extends Error {ocultar
-    constructor(code, messaje, statusCode = 400, details){
-        super(messaje)
+class AppError extends Error {
+    constructor(code, message, statusCode = 400, details){
+        super(message)
 
         this.name = "AppError";
         this.code = code; //El ID del error
