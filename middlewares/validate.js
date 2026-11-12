@@ -1,25 +1,27 @@
-import { validate } from "zod";
-import AppError from "../errors/AppError";
+import AppError from "../errors/AppError.js";
 
+//Mi funcion validate recibe un schema Zod y retorna un middleware que valida el body del request
 function validate(schema) {
   return (req, res, next) => {
-    
-    const result = schema.safeParse(req.body); //Valido el JSON que entra en el body
 
-    if (!result.sussess) {
-      //si es invalido mando detalle del error
+    //Verifico si el req.body JSON cumple mis reglas del sqhema
+    const result = schema.safeParse(req.body);
 
-      const details = result.error.issues.map((issues) => ({
+    //Si falla no sigo y paso error al middleware de manejo de errores (errorHandler)
+    if (!result.success) {
+
+      const details = result.error.issues.map((issue) => ({
         field: issue.path.join(".") || "body",
         message: issue.message,
       }));
 
+      //Le paso el error al middleware de manejo de errores (errorHandler)
       return next(
         new AppError("VALIDACION_ERROR", "DATOS INVALIDOS", 400, details),
       );
     }
 
-    //Si SI es valido entonces procesamos
+    //Si es valido entonces procesamos
     req.body = result.data;
 
     next();

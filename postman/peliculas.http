@@ -1,0 +1,27 @@
+@baseUrl = http://localhost:8080
+
+### 1. Listar todas las películas
+GET {{baseUrl}}/peliculas
+Accept: application/json
+
+
+### 2. Crear una película
+POST {{baseUrl}}/peliculas
+Content-Type: application/json
+
+{
+  "titulo": "Interestelar",
+  "fechaProyeccion": "2026-12-10T21:00:00-03:00",
+  "capacidadTotal": 100
+}
+
+
+### 3. Crear película inválida (prueba de Zod)
+POST {{baseUrl}}/peliculas
+Content-Type: application/json
+
+{
+  "titulo": "",
+  "fechaProyeccion": "fecha-invalida",
+  "capacidadTotal": -10
+}

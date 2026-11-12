@@ -1,10 +1,14 @@
 import { Router } from "express";
 import healthRoutes from "./healthRoutes.js";
+import peliculasRoutes from "./peliculasRoutes.js";
 
-// Router principal: agrupa los routers de cada recurso.
+// Router principal
 const routes = Router();
 
-// Asignamos el prefijo /health al router correspondiente.
+// Ruteo de /health
 routes.use("/health", healthRoutes);
+
+// Ruteo de /peliculas
+routes.use("/peliculas", peliculasRoutes); 
 
 export default routes;
