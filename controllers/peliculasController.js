@@ -1,8 +1,9 @@
-import dao from "../data-access/peliculasMemoryDao.js";
+import dao from "../daopeliculasMemoryDao.js";
 import createPelicula from "../usecases/peliculas/createPelicula.js";
 import getPeliculas from "../usecases/peliculas/getPeliculas.js";
 
 class PeliculasController {
+  
   #dao;
 
   //Recibo DAO por inyeccion de dependencias, para poder cambiarlo facilmente (Memory, SQL, etc)
