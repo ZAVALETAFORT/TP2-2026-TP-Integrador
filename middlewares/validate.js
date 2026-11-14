@@ -1,15 +1,13 @@
 import AppError from "../errors/AppError.js";
 
 //Mi funcion validate recibe un schema Zod y retorna un middleware que valida el body del request
-function validate(schema) {
+function validate(schema, target = "body") {
   return (req, res, next) => {
-
     //Verifico si el req.body JSON cumple mis reglas del sqhema
-    const result = schema.safeParse(req.body);
+    const result = schema.safeParse(req[target]);
 
     //Si falla no sigo y paso error al middleware de manejo de errores (errorHandler)
     if (!result.success) {
-
       const details = result.error.issues.map((issue) => ({
         field: issue.path.join(".") || "body",
         message: issue.message,
@@ -22,10 +20,22 @@ function validate(schema) {
     }
 
     //Si es valido entonces procesamos
-    req.body = result.data;
+    // Conservamos los datos procesados por Zod.
+    if (target === "body") {
+      req.body = result.data.body = result.data;
+    }
+
+    if (target === "params") {
+      Object.assign(req.params, result.data);
+    }
 
     next();
   };
 }
+
+//Valido los parametros de la URL
+const validateParams = (schema) => validate(schema, "params");
+export { validateParams };
+
 
 export default validate;

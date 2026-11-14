@@ -25,3 +25,44 @@ Content-Type: application/json
   "fechaProyeccion": "fecha-invalida",
   "capacidadTotal": -10
 }
+
+### 4. Buscar película existente — 200
+GET {{baseUrl}}/peliculas/1
+Accept: application/json
+
+
+### 5. Buscar película inexistente — 404
+GET {{baseUrl}}/peliculas/999
+Accept: application/json
+
+
+### 6. ID inválido — 400
+GET {{baseUrl}}/peliculas/abc
+Accept: application/json
+
+
+### 7. Actualizar película — 200
+PUT {{baseUrl}}/peliculas/1
+Content-Type: application/json
+
+{
+  "titulo": "Interestelar - Edición especial",
+  "capacidadTotal": 120
+}
+
+
+### 8. Capacidad inválida — 400
+PUT {{baseUrl}}/peliculas/1
+Content-Type: application/json
+
+{
+  "capacidadTotal": -10
+}
+
+### 9. Eliminar película — 204
+DELETE {{baseUrl}}/peliculas/1
+
+
+### 10. Comprobar eliminación — 404
+GET {{baseUrl}}/peliculas/1
+Accept: application/json

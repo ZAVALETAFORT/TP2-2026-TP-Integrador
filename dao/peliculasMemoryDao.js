@@ -18,38 +18,47 @@ class PeliculasMemoryDao {
     return pelicula;
   }
 
-  // Buscar por ID
+  // Busca la posición de una película por ID.
+  // Devuelve -1 si no existe.
+  #findIndexById(id) {
+    return this.#peliculas.findIndex((pelicula) => pelicula.id === Number(id));
+  }
+
+  // Obtiene la película utilizando su posición.
   async getById(id) {
+    const index = this.#findIndexById(id);
 
-    return this.#peliculas.find(
-      (pelicula) => pelicula.id === Number(id)) ?? null; //Null si no la encuentra
+    if (index === -1) return null;
+
+    return this.#peliculas[index];
   }
 
-  // Actualizar por ID
+  // Modifica los campos recibidos sin perder los anteriores.
+  // Conserva siempre el ID original.
   async update(id, changes) {
-    const index = this.#peliculas.findIndex( //Busca por index
-      (pelicula) => pelicula.id === Number(id));
+    const index = this.#findIndexById(id);
 
-    if (index === -1) return null; //Si no la encuentra, retorna null 
+    if (index === -1) return null;
 
-    //Si la encuentra, actualiza la pelicula con los cambios
-    this.#peliculas[index] = { ...this.#peliculas[index], ...changes };
-    
-    return this.#peliculas[index]; //Retorna la pelicula actualizada
+    this.#peliculas[index] = {
+      ...this.#peliculas[index],
+      ...changes,
+      id: this.#peliculas[index].id,
+    };
+
+    return this.#peliculas[index];
   }
 
-  // Borrar por ID
+  // Elimina una película del array.
   async delete(id) {
-    const index = this.#peliculas.findIndex( //Busca por index
-      (pelicula) => pelicula.id === Number(id));
+    const index = this.#findIndexById(id);
 
-    if (index === -1) return false; //Si no la encuentra, retorna false
+    if (index === -1) return false;
 
-    this.#peliculas.splice(index, 1); //Si la encuentra, la borra del array
+    this.#peliculas.splice(index, 1);
 
-    return true; //Retorna true si la borra
+    return true;
   }
-
 }
 
 export default new PeliculasMemoryDao();
