@@ -1,7 +1,9 @@
 # TP2 — API REST de Reservas de Cine
 
 **Trabajo Práctico Integrador — Taller de Programación 2**
+
 **Grupo 3:** Moises Zavaleta
+
 **Repo:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
 
 ## Proyecto
