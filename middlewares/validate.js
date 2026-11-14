@@ -22,7 +22,7 @@ function validate(schema, target = "body") {
     //Si es valido entonces procesamos
     // Conservamos los datos procesados por Zod.
     if (target === "body") {
-      req.body = result.data.body = result.data;
+      req.body = result.data;
     }
 
     if (target === "params") {

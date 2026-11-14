@@ -1,8 +1,12 @@
 import {z } from 'zod';
 //Esquema para validar datos JSON de pelicula
 
-//Validar un ID natural positivo
-const idPeliculaSchema = z.coerce.number().int().positive();
+// Validamos el objeto req.params y convertimos su ID a numero entero positivo
+const idPeliculaSchema = z.object({
+    
+    id: z.coerce.number().int().positive()
+
+});
 
 //Validar al crear 
 const crearPeliculaSchema = z.object({
@@ -12,6 +16,7 @@ const crearPeliculaSchema = z.object({
     capacidadTotal: z.number().int().positive(), //Numero entero positivo
     genero: z.string().trim().min(1).optional(), //String minimo 1 y es opcional
     imagenUrl: z.url().optional()
+
 });
 
 // PUT: Validar al actualizar
