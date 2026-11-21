@@ -1,16 +1,16 @@
-import getPeliculas from "./getPeliculas";
-import getPeliculaById from "./getPeliculaById";
-import createPelicula from "./createPelicula";
-import updatePelicula from "./updatePelicula";
-import deletePelicula from "./deletePelicula";
+import getPeliculas from "./getPeliculas.js";
+import getPeliculaById from "./getPeliculaById.js";
+import createPelicula from "./createPelicula.js";
+import updatePelicula from "./updatePelicula.js";
+import deletePelicula from "./deletePelicula.js";
 
 //Factory: Conecto el DAO con los useCases 
 function makePeliculaUseCases(dao) {
   return {
     getPeliculas: () => getPeliculas(dao),
-    getPeliculaById: (id) => getPeliculaById(dao, id),
-    createPelicula: (pelicula) => createPelicula(dao, pelicula),
-    updatePelicula: (id, pelicula) => updatePelicula(dao, id, pelicula),
+    getPeliculaById: (id) => getPeliculaById(id,dao),
+    createPelicula: (data) => createPelicula(data, dao),
+    updatePelicula: (id, changes) => updatePelicula(id, changes, dao),
     deletePelicula: (id) => deletePelicula(dao, id)
   };
 }

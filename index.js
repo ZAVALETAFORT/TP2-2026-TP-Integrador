@@ -1,5 +1,6 @@
 import express from "express";
 import errorHandler from "./middlewares/errorHandler.js";
+import { PORT } from "./config/config.js";
 
 // Importo las rutas y los middlewars 
 import routes from "./routes/routes.js";
@@ -16,6 +17,6 @@ app.use(notFound); // Middleware para manejar rutas no encontradas
 app.use(errorHandler); // Middleware de manejo de errores
 
 
-app.listen(8080, () => {
-  console.log("Puerto 8080");
+app.listen(PORT, () => {
+  console.log(`Puerto ${PORT}`);
 });
