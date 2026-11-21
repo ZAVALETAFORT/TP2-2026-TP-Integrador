@@ -92,7 +92,7 @@ container/      # Conecta las capas
 routes/         # Endpoints
 controllers/    # Entrada y salida HTTP
 usecases/       # Reglas de negocio
-data-access/    # Memoria y Sequelize (DAO)
+dao/		    # Memoria y Sequelize (DAO)
 schemas/        # Validaciones Zod
 middlewares/    # Validación, login y errores
 errors/         # AppError

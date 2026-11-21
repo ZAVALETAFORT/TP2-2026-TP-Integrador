@@ -11,7 +11,7 @@ function makePeliculaUseCases(dao) {
     getPeliculaById: (id) => getPeliculaById(id,dao),
     createPelicula: (data) => createPelicula(data, dao),
     updatePelicula: (id, changes) => updatePelicula(id, changes, dao),
-    deletePelicula: (id) => deletePelicula(dao, id)
+    deletePelicula: (id) => deletePelicula(id,dao)
   };
 }
 
