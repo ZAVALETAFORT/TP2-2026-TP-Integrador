@@ -1,11 +1,18 @@
-//Caso de uso: Crea la peli con el dao que le paso (Memory, sql, etc)
+// Caso de uso: crear una película.
 async function createPelicula(data, dao) {
+  const nuevaPelicula = {
+    ...data,
 
-    //Cada nueva peli inicia con cuposDisponibles = capacidadTotal
-    const nuevaPelicula = { ...data, cuposDisponibles: data.capacidadTotal };
+    // Guardo la misma representación temporal en ambos DAO.
+    fechaProyeccion: new Date(
+      data.fechaProyeccion
+    ).toISOString(),
 
-    //DAO es el que guarda en la base de datos (Memory, sql, etc)
-    return dao.save(nuevaPelicula);
+    // Al crearla, todos los lugares están disponibles.
+    cuposDisponibles: data.capacidadTotal
+  };
+
+  return dao.save(nuevaPelicula);
 }
 
 export default createPelicula;

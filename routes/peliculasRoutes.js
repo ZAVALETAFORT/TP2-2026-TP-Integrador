@@ -1,27 +1,46 @@
-import express from "express";
-import peliculasController from "../controllers/peliculasController.js"; 
-import validate, {validateParams} from "../middlewares/validate.js"; 
-import {idPeliculaSchema, crearPeliculaSchema, actualizarPeliculaSchema} from "../schemas/peliculaSchemas.js"; //schema Zod
+import { Router } from "express";
 
-const peliculasRoutes = express.Router();
+import validate, { validateParams } from "../middlewares/validate.js";
 
-// GET: consulta todas las peliculas
-peliculasRoutes.get("/", peliculasController.list);
+import {
+  idPeliculaSchema,
+  crearPeliculaSchema,
+  actualizarPeliculaSchema,
+} from "../schemas/peliculaSchemas.js";
 
-// POST: Crea una nueva pelicula, validando el body con Zod
-peliculasRoutes.post( "/", validate(crearPeliculaSchema), peliculasController.create );
+// Factory de rutas de películas.
+// Recibe el Controller desde el Container.
+function createPeliculasRoutes(controller) {
+  // Creamos un Router de Express.
+  const router = Router();
 
-//GET: /peliculas/:id - Consulta una pelicula por ID, validando el parametro con Zod
-peliculasRoutes.get("/:id", validateParams(idPeliculaSchema), peliculasController.get);
+  // GET /peliculas
+  // Devuelve todas las películas.
+  router.get("/", controller.list);
 
-//PUT: /peliculas/:id - Actualiza una pelicula por ID, validando el parametro y el body con Zod
-peliculasRoutes.put("/:id", validateParams(idPeliculaSchema), validate(actualizarPeliculaSchema), peliculasController.update);
+  // GET /peliculas/:id
+  // Busca una película por su ID.
+  router.get("/:id", validateParams(idPeliculaSchema), controller.get);
 
-//DELETE: /peliculas/:id - Elimina una pelicula por ID, validando el parametro con Zod
-peliculasRoutes.delete("/:id", validateParams(idPeliculaSchema), peliculasController.remove);
+  // POST /peliculas
+  // Crea una película validando el JSON.
+  router.post("/", validate(crearPeliculaSchema), controller.create);
 
+  // PUT /peliculas/:id
+  // Actualiza una película.
+  router.put(
+    "/:id",
+    validateParams(idPeliculaSchema),
+    validate(actualizarPeliculaSchema),
+    controller.update,
+  );
 
+  // DELETE /peliculas/:id
+  // Elimina una película.
+  router.delete("/:id", validateParams(idPeliculaSchema), controller.remove);
 
-export default peliculasRoutes;
+  // Entregamos el Router configurado.
+  return router;
+}
 
-//CONTINUAR EN 7.2 AGREGAR LAS RUTAS
+export default createPeliculasRoutes;

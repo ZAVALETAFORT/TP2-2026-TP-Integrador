@@ -1,0 +1,104 @@
+@baseUrl = http://localhost:8080
+
+### 1. Listar usuarios - 200
+GET {{baseUrl}}/usuarios
+Accept: application/json
+
+
+### 2. Crear primer usuario - 201
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Ana Garcia",
+  "email": "ana@example.com"
+}
+
+
+### 3. Consultar usuario - 200
+GET {{baseUrl}}/usuarios/1
+Accept: application/json
+
+
+### 4. Crear usuario con email duplicado - 409
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Otra Ana",
+  "email": "ANA@example.com"
+}
+
+
+### 5. Crear segundo usuario - 201
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Bruno Lopez",
+  "email": "bruno@example.com"
+}
+
+
+### 6. Actualizar primer usuario - 200
+PUT {{baseUrl}}/usuarios/1
+Content-Type: application/json
+
+{
+  "nombre": "Ana Garcia Actualizada",
+  "email": "ana.nueva@example.com"
+}
+
+
+### 7. Intentar usar email de otro usuario - 409
+PUT {{baseUrl}}/usuarios/2
+Content-Type: application/json
+
+{
+  "email": "ana.nueva@example.com"
+}
+
+
+### 8. Crear usuario inválido - 400
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "",
+  "email": "correo-invalido"
+}
+
+
+### 9. Intentar asignar rol admin - 400
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Admin Falso",
+  "email": "admin@example.com",
+  "rol": "admin"
+}
+
+
+### 10. Consultar ID inexistente - 404
+GET {{baseUrl}}/usuarios/999
+Accept: application/json
+
+
+### 11. Consultar ID inválido - 400
+GET {{baseUrl}}/usuarios/abc
+Accept: application/json
+
+
+### 12. Query no admitido - 400
+GET {{baseUrl}}/usuarios?page=1
+Accept: application/json
+
+
+### 13. Eliminar segundo usuario - 204
+DELETE {{baseUrl}}/usuarios/2
+
+
+### 14. Comprobar eliminación - 404
+GET {{baseUrl}}/usuarios/2
+Accept: application/json

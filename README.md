@@ -1,39 +1,73 @@
+
 # TP2 — API REST de Reservas de Cine
 
-**Trabajo Práctico Integrador — Taller de Programación 2**
+**Trabajo Práctico Integrador — Taller de Programación 2**  
+**Grupo 3:** Moises Zavaleta  
+**Repositorio:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
 
-**Grupo 3:** Moises Zavaleta
+## 1. Descripción
 
-**Repo:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
+API REST para gestionar usuarios, películas y reservas de cine.
 
-## Proyecto
+Tecnologías:
 
-API REST para gestionar **usuarios, películas y reservas de cine**. Los clientes podrán registrarse, iniciar sesión, consultar la cartelera y reservar lugares disponibles. Los admins podrán gestionar las pelis, los usuarios y las reservas.
+- JavaScript con ES Modules.
+- Node.js y Express.
+- Zod para validaciones.
+- Sequelize con SQLite.
+- Persistencia alternativa mediante arrays JavaScript.
 
-Voy a usar **Node.js, Express y JavaScript**. Los datos se guardarán en memoria o en **SQLite**, según la configuración.
+La aplicación utiliza una arquitectura en capas:
 
-## 1. Dominio
+**Routes → Controllers → Use Cases → DAO**
 
-### 1.1. ¿Cómo funciona?
+El Container construye las dependencias y la DAO Factory selecciona el almacenamiento.
 
-1. El admin carga una película, su fecha de proyección y la cantidad de lugares.
-2. El cliente consulta la cartelera, se registra e inicia sesión.
-3. Elige una peli e indica cuántos lugares quiere reservar.
-4. La API verifica los cupos, guarda la reserva y descuenta los lugares.
-5. El cliente puede consultar o cancelar su reserva. Si cancela, se devuelven los cupos.
+## 2. Dominio
 
-### 1.2. Entidades
+### 2.1. Usuario
 
+Campos:
 
-| Entidad      | Para qué sirve                   | Campos                                                                                         |
-| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **Usuario**  | Cliente o admin del sistema.      | `id`, `nombre`, `email`, `passwordHash`, `rol`                                                 |
-| **Pelicula** | Peli de la cartelera y sus cupos. | `id`, `titulo`, `genero`, `imagenUrl`, `fechaProyeccion`, `capacidadTotal`, `cuposDisponibles` |
-| **Reserva**  | Une un usuario con una película. | `id`, `usuarioId`, `peliculaId`, `cantidad`, `estado`                                          |
+- `id`
+- `nombre`
+- `email`
+- `passwordHash`
+- `rol`
 
-`genero` e `imagenUrl` serán opcionales. El estado de la reserva será `activa` o `cancelada`.
+Los roles previstos son `cliente` y `admin`.
 
-### 1.3. Relaciones
+### 2.2. Película
+
+Campos:
+
+- `id`
+- `titulo`
+- `genero`
+- `imagenUrl`
+- `fechaProyeccion`
+- `capacidadTotal`
+- `cuposDisponibles`
+
+Los campos `genero` e `imagenUrl` son opcionales.
+
+### 2.3. Reserva
+
+Campos:
+
+- `id`
+- `usuarioId`
+- `peliculaId`
+- `cantidad`
+- `estado`
+
+Los estados previstos son `activa` y `cancelada`.
+
+### 2.4. Relaciones
+
+Un usuario puede realizar varias reservas y una película puede recibir reservas de distintos usuarios.
+
+Reserva relaciona las entidades Usuario y Película.
 
 ```mermaid
 erDiagram
@@ -41,131 +75,273 @@ erDiagram
     PELICULA ||--o{ RESERVA : recibe
 ```
 
-Un usuario puede tener varias reservas y una película puede recibir varias reservas. **Reserva** es la entidad que relaciona a las otras dos.
+## 3. Reglas de negocio
 
-### 1.4. Reglas de negocio
+Implementadas:
 
-- Un mismo email no puede registrarse dos veces.
-- Solo se puede reservar si existen el usuario y la película, la cantidad es mayor a cero y hay cupos suficientes.
-- Un usuario no puede tener dos reservas **activas** para la misma peli.
-- Crear una reserva descuenta cupos; cancelarla devuelve los cupos **una sola vez**. Si se modifica la cantidad, se ajusta la diferencia.
-- No se pueden eliminar usuarios ni películas que tengan reservas.
-- Un cliente solo puede ver y gestionar **sus propias reservas**. Los admins pueden gestionar usuarios, pelis y reservas.
+- No se permiten emails duplicados.
+- Las películas nuevas comienzan con todos sus cupos disponibles.
+- No se permite reducir la capacidad por debajo de los lugares ocupados.
+- Los errores de validación utilizan Zod.
+- Los errores de negocio se representan mediante AppError.
 
-Estas reglas van en los **Use Cases**, no en los Controllers.
+Pendientes de integrar con Reservas:
 
-## 2. Implementación del sistema
+- Verificar que existan el usuario y la película.
+- Controlar la disponibilidad de cupos.
+- Impedir dos reservas activas del mismo usuario para la misma película.
+- Descontar cupos al reservar.
+- Devolver cupos una sola vez al cancelar.
+- Ajustar cupos al cambiar la cantidad.
+- Impedir eliminar usuarios o películas con reservas asociadas.
+- Aplicar permisos según el usuario autenticado.
 
-### 2.1. Arquitectura
+Las reglas de negocio deben permanecer en los Use Cases.
 
-Patron: **Routes → Controllers → Use Cases → DAO**.
-
-- **Routes:** definen los endpoints y usan middlewares.
-- **Controllers:** reciben la petición HTTP y devuelven la respuesta.
-- **Use Cases:** aplican las reglas de negocio.
-- **DAO:** guardan y buscan los datos.
-
-El **Container** (`container/container.js`) conecta las capas y elige qué DAO usar. Así podemos cambiar entre memoria y SQLite sin cambiar el resto del código.
-
-```mermaid
-flowchart TD
-    A["Cliente / Swagger"] --> B["Routes + middlewares"]
-    B --> C["Controllers"]
-    C --> D["Use Cases"]
-    D --> E["DAO"]
-    E --> F["Memoria"]
-    E --> G["Sequelize + SQLite"]
-    H["Container"] -.->|"conecta dependencias"| C
-    H -.->|"elige DAO"| E
-    D -.->|"emite evento"| I["EventEmitter"]
-    I --> J["Notificación en consola"]
-```
-
-Se puede usar como persistencia **RAM o SQLite**
-
-### 2.2. Servidor y carpetas
-
-Uso de **JavaScript con ES Modules, Node.js y Express**. `index.js` solo configurará e iniciará el servidor con el router que entrega el Container.
+## 4. Arquitectura
 
 ```text
-index.js        # Inicio de la API
-config/         # Variables de entorno
-container/      # Conecta las capas
-routes/         # Endpoints
-controllers/    # Entrada y salida HTTP
-usecases/       # Reglas de negocio
-data-access/    # Memoria y Sequelize (DAO)
-schemas/        # Validaciones Zod
-middlewares/    # Validación, login y errores
-errors/         # AppError
+index.js              Inicio de Express
+config/               Configuración centralizada
+connection/           Conexión Sequelize
+container/            Inyección de dependencias
+dao/                  DAO Memory y DAO Sequelize
+dao/models/           Modelos y relaciones SQL
+controllers/          Entrada y salida HTTP
+routes/               Endpoints
+usecases/             Reglas de negocio
+schemas/              Validación Zod
+middlewares/          Validaciones y errores
+errors/               AppError
+postman/              Pruebas HTTP
 ```
 
-Los archivos de eventos, conexión y seguridad se agregarán cuando hagan falta, sin crear carpetas vacías de entrada.
+### DAO Factory
 
-### 2.3. CRUD y login
+Cada entidad dispone de adaptadores con la misma interfaz:
 
-**Usuario, Pelicula y Reserva** tendrán CRUD: listar, buscar por ID, crear, actualizar y eliminar (`GET`, `POST`, `PUT`, `DELETE`).
+- **Memory:** arrays de JavaScript, sin base de datos.
+- **Sequelize:** almacenamiento en SQLite.
 
-Para el cliente, **cancelar** una reserva cambia su estado a `cancelada`; borrarla queda reservado al admin. El registro y el login tendrán rutas separadas.
+La selección se realiza mediante `PERSISTENCE_TYPE`.
 
-Uso de **bcrypt** para guardar contraseñas como hash y **JWT** para identificar al usuario. Habrá dos roles: `cliente` y `admin`. El registro público siempre crea clientes; el admin inicial se configurará al arrancar la API.
+### Container
 
-### 2.4. Validaciones y errores
+El Container:
 
-Uso de **Zod** para validar `body`, `params` y `query`. Los errores de negocio se manejarán con `AppError`, un `errorHandler` general y `notFound` para rutas inexistentes.
+1. Inicializa SQLite cuando corresponde.
+2. Selecciona los DAO mediante la Factory.
+3. Inyecta los DAO en las factories de casos de uso.
+4. Inyecta los casos de uso en los Controllers.
+5. Construye y devuelve el Router principal.
 
-La API responderá con códigos HTTP adecuados (`200`, `201`, `204`, `400`, `401`, `403`, `404`, `409` y `500`) y errores con un formato consistente.
+Los Controllers no importan los DAO concretos.
 
-### 2.5. Persistencia
+## 5. Instalación
 
-Cada entidad tendrá dos DAO con **los mismos métodos y respuestas**:
+### Requisitos
 
+- Node.js 24.
+- npm.
+- Git.
 
-| Configuración               | Dónde guarda los datos                       |
-| ------------------------------ | ----------------------------------------------- |
-| `PERSISTENCE_TYPE=memory`    | Arrays de js en RAM; se pierden al reiniciar. |
-| `PERSISTENCE_TYPE=sequelize` | SQLite en `data/cine.sqlite`;                 |
+### Clonar la versión en desarrollo
 
-Para SQLlite se va crear un mock.js con datos de precarga (users, pelis, reservas)
+```bash
+git clone --branch develop https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador.git
+cd TP2-2026-TP-Integrador
+```
 
-### 2.6. Eventos
-
-Uso de **EventEmitter** para un evento sencillo:
-
-- `reserva.creada`: cuando se confirma una reserva, un listener muestra una notificación en consola.
-
-Si falla la notificación, la reserva debe seguir confirmada. Por ahora no necesitamos enviar emails ni guardar notificaciones en archivos.
-
-### 2.7. Documentación
-
-La API se documentará con **OpenAPI 3 y Swagger UI** en `/api-docs`, incluyendo endpoints, datos de entrada, respuestas y errores. Desde ahí podremos probar tanto el modo memoria como SQLite. [Esto lo veo en la prox clase]
-
-### 2.8. Instalación
-
-Cuando el código esté implementado:
+### Instalar dependencias
 
 ```bash
 npm ci
-cp .env.example .env
+```
+
+### Iniciar la API
+
+```bash
+npm start
+```
+
+Para desarrollo con reinicio automático:
+
+```bash
 npm run dev
 ```
 
-El `.env.example` mostrará las variables necesarias: `PORT`, `PERSISTENCE_TYPE`, `SQLITE_STORAGE`, `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`. No subiremos al repo `.env`, `node_modules` ni archivos `.sqlite`.
+No es obligatorio crear un archivo `.env`.
 
-Para cambiar entre memoria y SQLite, editamos `PERSISTENCE_TYPE` en `.env` y reiniciamos la API.
+Por defecto, el sistema utiliza SQLite y el puerto `8080`.
 
-## 3. Pruebas funcionales previstas
+Al iniciar, la aplicación crea automáticamente el directorio `data/`, el archivo SQLite si no existe y las tablas correspondientes.
 
-- [ ]  La API arranca y Swagger abre en `/api-docs`.
-- [ ]  Un cliente se registra, inicia sesión y obtiene un JWT.
-- [ ]  Cualquiera puede consultar la cartelera; solo un admin puede modificar las pelis.
-- [ ]  Funcionan los CRUD de usuarios, películas y reservas.
-- [ ]  No se permiten emails duplicados, cantidades inválidas ni reservas sin cupos.
-- [ ]  Un usuario no puede tener dos reservas activas para la misma peli.
-- [ ]  Crear una reserva descuenta cupos; cancelarla los devuelve una sola vez.
-- [ ]  Un cliente no puede gestionar reservas ajenas.
-- [ ]  La API responde de forma equivalente usando `memory` o `sequelize`.
-- [ ]  SQLite conserva los datos al reiniciar.
-- [ ]  El evento `reserva.creada` muestra la notificación sin afectar la reserva.
+No se requiere instalar SQLite por separado ni ejecutar comandos SQL manuales.
 
-**Estado:** en diseño. El desarrollo se hará paso a paso sobre la rama `develop`.
+## 6. Configuración
+
+Valores predeterminados:
+
+| Variable | Valor |
+|---|---|
+| `PORT` | `8080` |
+| `PERSISTENCE_TYPE` | `sequelize` |
+| `SQLITE_STORAGE` | `data/cine.sqlite` |
+
+El archivo `.env.example` documenta estas variables.
+
+El archivo `.env` es opcional y permite sobrescribir los valores predeterminados.
+
+### SQLite persistente
+
+```bash
+PERSISTENCE_TYPE=sequelize npm start
+```
+
+Los datos se almacenan en `data/cine.sqlite`.
+
+### Arrays JavaScript
+
+```bash
+PERSISTENCE_TYPE=memory npm start
+```
+
+Los datos se almacenan en memoria y desaparecen al detener el proceso.
+
+### SQLite temporal para pruebas
+
+```bash
+PERSISTENCE_TYPE=sequelize SQLITE_STORAGE=:memory: npm start
+```
+
+Este último modo utiliza SQLite en RAM. No equivale al DAO Memory implementado con arrays.
+
+## 7. Endpoints implementados
+
+### Salud
+
+- `GET /health`
+
+### Películas
+
+- `GET /peliculas`
+- `GET /peliculas/:id`
+- `POST /peliculas`
+- `PUT /peliculas/:id`
+- `DELETE /peliculas/:id`
+
+### Usuarios
+
+- `GET /usuarios`
+- `GET /usuarios/:id`
+- `POST /usuarios`
+- `PUT /usuarios/:id`
+- `DELETE /usuarios/:id`
+
+Actualmente las rutas permiten probar los CRUD y sus validaciones. La autorización por roles se incorporará en una fase posterior.
+
+## 8. Validaciones y errores
+
+Se utiliza Zod para validar entradas y un middleware de errores centralizado.
+
+Ejemplo de respuesta:
+
+```json
+{
+  "error": {
+    "code": "EMAIL_DUPLICATED",
+    "message": "El email ya está registrado"
+  }
+}
+```
+
+Se utilizan los códigos HTTP correspondientes a cada operación, incluidos `200`, `201`, `204`, `400`, `404`, `409` y `500`.
+
+## 9. Eventos
+
+Se implementará un evento de dominio mediante EventEmitter:
+
+`reserva.creada`
+
+Un listener independiente enviará una notificación a consola mediante un notificador.
+
+Los errores del listener no deben impedir confirmar una reserva ya guardada.
+
+## 10. Autenticación y permisos
+
+Pendiente de implementación:
+
+- Registro público.
+- Login.
+- Contraseñas con bcrypt.
+- JWT.
+- Roles `cliente` y `admin`.
+- Restricción de acceso a reservas propias.
+- Administración de usuarios y películas.
+- Inicialización segura de un administrador.
+
+No se publicarán secretos ni contraseñas en Git.
+
+## 11. Datos iniciales
+
+Está prevista una precarga de datos de ejemplo mediante `mock.js`.
+
+La precarga deberá ser segura e idempotente, evitando duplicaciones o sobrescritura de datos al reiniciar.
+
+Todavía no está implementada.
+
+## 12. Documentación
+
+Se publicará documentación OpenAPI 3 mediante Swagger UI en:
+
+`/api-docs`
+
+La documentación incluirá los endpoints, parámetros, ejemplos, respuestas y errores.
+
+**Pendiente de implementación.**
+
+## 13. Pruebas
+
+Pruebas completadas durante el desarrollo:
+
+- Validación de sintaxis.
+- CRUD de Películas con DAO Memory y Sequelize.
+- CRUD de Usuarios con DAO Memory y Sequelize.
+- Comparación de respuestas entre ambos DAO.
+- Persistencia SQLite entre procesos.
+- Inicialización de las tres tablas.
+- Construcción del Container.
+- Inyección de Controllers.
+- Pruebas HTTP de creación, consulta y errores.
+- Respuesta HTTP 409 para emails duplicados.
+
+Pruebas pendientes:
+
+- Instalación desde un clon limpio.
+- Reservas y control de cupos.
+- Concurrencia y transacciones.
+- Autenticación y autorización.
+- Eventos.
+- Swagger.
+
+## 14. Archivos excluidos del repositorio
+
+No deben subirse:
+
+- `.env`
+- `node_modules/`
+- Archivos `.sqlite`
+- Archivos auxiliares de SQLite
+- Secretos y credenciales
+
+El archivo `.env.example` sí debe versionarse.
+
+## 15. Estado del proyecto
+
+**En desarrollo.**
+
+Completados: modelos, persistencia básica de Películas y Usuarios, DAO Factory, Container e integración HTTP.
+
+Pendientes: Reservas, Eventos, Autenticación, Swagger y QA final desde clon limpio.
+
+La rama de trabajo es `develop`. La integración final a `main` se realizará después de completar las pruebas.

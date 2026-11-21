@@ -1,40 +1,41 @@
 class PeliculasMemoryDao {
-  #peliculas = []; //Array privado en RAM
-  #nextId = 1; //ID autoincremental
+  
+  #peliculas = [];
+  #nextId = 1;
 
-  // Listar
+  // Listar películas.
   async getAll() {
-    //Retorno una COPIA del array de peliculas
-    return [...this.#peliculas];
+    return this.#peliculas.map((pelicula) => ({ ...pelicula }));
   }
-  // Guardar
+
+  // Guardar película.
   async save(data) {
-    //Copio el objeto data y le agrego el id autoincremental dentro de pelicula
-    const pelicula = { ...data, id: this.#nextId };
+    const pelicula = {
+      ...data,
+      id: this.#nextId,
+    };
 
-    this.#peliculas.push(pelicula); //Agrego la pelicula al array
-    this.#nextId += 1; //Incremento el id para la proxima pelicula
+    this.#peliculas.push(pelicula);
+    this.#nextId += 1;
 
-    return pelicula;
+    return { ...pelicula };
   }
 
-  // Busca la posición de una película por ID.
-  // Devuelve -1 si no existe.
+  // Buscar posición por ID.
   #findIndexById(id) {
     return this.#peliculas.findIndex((pelicula) => pelicula.id === Number(id));
   }
 
-  // Obtiene la película utilizando su posición.
+  // Consultar película.
   async getById(id) {
     const index = this.#findIndexById(id);
 
     if (index === -1) return null;
 
-    return this.#peliculas[index];
+    return { ...this.#peliculas[index] };
   }
 
-  // Modifica los campos recibidos sin perder los anteriores.
-  // Conserva siempre el ID original.
+  // Actualizar película.
   async update(id, changes) {
     const index = this.#findIndexById(id);
 
@@ -46,10 +47,10 @@ class PeliculasMemoryDao {
       id: this.#peliculas[index].id,
     };
 
-    return this.#peliculas[index];
+    return { ...this.#peliculas[index] };
   }
 
-  // Elimina una película del array.
+  // Eliminar película.
   async delete(id) {
     const index = this.#findIndexById(id);
 
