@@ -1,60 +1,71 @@
-import dao from "../dao/peliculasMemoryDao.js";
 import AppError from "../errors/AppError.js";
 
-import createPelicula from "../usecases/peliculas/createPelicula.js";
-import getPeliculas from "../usecases/peliculas/getPeliculas.js";
-import getPeliculaById from "../usecases/peliculas/getPeliculaById.js";
-import updatePelicula from "../usecases/peliculas/updatePelicula.js";
-import deletePelicula from "../usecases/peliculas/deletePelicula.js";
-
+// Controller de películas.
+// Recibe los casos de uso desde el Container.
 class PeliculasController {
-  #dao;
 
-  //Recibo DAO por inyeccion de dependencias, para poder cambiarlo facilmente (Memory, SQL, etc)
-  constructor(daoDependencia) {
-    this.#dao = daoDependencia;
+  #useCases;
+
+  // Inyección de dependencias.
+  constructor(useCases) {
+    this.#useCases = useCases;
   }
 
-  //GET /peliculas
+  // GET /peliculas
+  // Devuelve todas las películas.
   list = async (req, res) => {
-    const peliculas = await getPeliculas(this.#dao);
+
+    const peliculas = await this.#useCases.getPeliculas();
 
     res.json(peliculas);
   };
 
-  //POST /peliculas
-  create = async (req, res) => {
-    const nuevaPelicula = await createPelicula(req.body, this.#dao);
-    //HTTP 201 indica que se creo un recurso nuevo
-    res.status(201).json(nuevaPelicula);
-  };
-
   // GET /peliculas/:id
+  // Busca una película por ID.
   get = async (req, res) => {
-    const pelicula = await getPeliculaById(req.params.id, this.#dao);
 
-    // El DAO informa ausencia con null; el Controller responde 404.
+    const pelicula = await this.#useCases.getPeliculaById(
+      req.params.id
+    );
+
+    // El caso de uso devuelve null si no existe.
+    // El Controller lo convierte en HTTP 404.
     if (!pelicula) {
       throw new AppError(
         "PELICULA_NOT_FOUND",
         "No existe una película con ese ID",
-        404,
+        404
       );
     }
 
     res.json(pelicula);
   };
 
+  // POST /peliculas
+  // Crea una película.
+  create = async (req, res) => {
+
+    const pelicula = await this.#useCases.createPelicula(
+      req.body
+    );
+
+    res.status(201).json(pelicula);
+  };
+
   // PUT /peliculas/:id
+  // Actualiza una película.
   update = async (req, res) => {
-    // El Use Case comprueba existencia y reglas de capacidad.
-    const pelicula = await updatePelicula(req.params.id, req.body, this.#dao);
+
+    const pelicula = await this.#useCases.updatePelicula(
+      req.params.id,
+      req.body
+    );
 
     if (!pelicula) {
       throw new AppError(
         "PELICULA_NOT_FOUND",
         "No existe una película con ese ID",
-        404,
+        404
       );
     }
 
@@ -62,22 +73,23 @@ class PeliculasController {
   };
 
   // DELETE /peliculas/:id
+  // Elimina una película.
   remove = async (req, res) => {
-    const deleted = await deletePelicula(req.params.id, this.#dao);
 
-    // Si el DAO devuelve false, no había nada para eliminar.
-    if (!deleted) {
+    const eliminado = await this.#useCases.deletePelicula(
+      req.params.id
+    );
+
+    if (!eliminado) {
       throw new AppError(
         "PELICULA_NOT_FOUND",
         "No existe una película con ese ID",
-        404,
+        404
       );
     }
 
-    // Eliminación exitosa: 204 sin contenido.
     res.status(204).send();
   };
-
 }
 
-export default new PeliculasController(dao);
+export default PeliculasController;

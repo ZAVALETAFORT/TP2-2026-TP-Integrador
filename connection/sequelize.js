@@ -7,7 +7,7 @@ import {
   SQLITE_STORAGE
 } from "../config/config.js";
 
-// Creo la carpeta para SQLite 
+// Crear automáticamente el directorio de SQLite si hace falta.
 if (
   PERSISTENCE_TYPE === "sequelize" &&
   SQLITE_STORAGE !== ":memory:"
