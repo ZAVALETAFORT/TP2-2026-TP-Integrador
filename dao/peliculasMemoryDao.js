@@ -1,5 +1,4 @@
 class PeliculasMemoryDao {
-  
   #peliculas = [];
   #nextId = 1;
 
@@ -48,6 +47,32 @@ class PeliculasMemoryDao {
     };
 
     return { ...this.#peliculas[index] };
+  }
+
+  // Ajustar cupos de forma síncrona.
+  // diferencia negativa: descontar.
+  // diferencia positiva: devolver.
+  // Devuelve true, false si no hay capacidad o null si no existe.
+  ajustarCupos(id, diferencia) {
+    const index = this.#findIndexById(id);
+
+    if (index === -1) return null;
+
+    const pelicula = this.#peliculas[index];
+
+    const nuevosCupos = pelicula.cuposDisponibles + diferencia;
+
+    if (
+      !Number.isInteger(diferencia) ||
+      nuevosCupos < 0 ||
+      nuevosCupos > pelicula.capacidadTotal
+    ) {
+      return false;
+    }
+
+    pelicula.cuposDisponibles = nuevosCupos;
+
+    return true;
   }
 
   // Eliminar película.

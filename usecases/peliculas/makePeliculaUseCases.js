@@ -4,15 +4,15 @@ import createPelicula from "./createPelicula.js";
 import updatePelicula from "./updatePelicula.js";
 import deletePelicula from "./deletePelicula.js";
 
-//Factory: Conecto el DAO con los useCases 
-function makePeliculaUseCases(dao) {
+// Vincula los casos de uso de Películas con sus dependencias.
+function makePeliculaUseCases(dao, reservasDao) {
   return {
+
     getPeliculas: () => getPeliculas(dao),
-    getPeliculaById: (id) => getPeliculaById(id,dao),
+    getPeliculaById: (id) => getPeliculaById(id, dao),
     createPelicula: (data) => createPelicula(data, dao),
     updatePelicula: (id, changes) => updatePelicula(id, changes, dao),
-    deletePelicula: (id) => deletePelicula(id,dao)
+    deletePelicula: (id) => deletePelicula(id, dao, reservasDao),
   };
 }
-
 export default makePeliculaUseCases;

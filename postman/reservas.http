@@ -1,0 +1,146 @@
+@baseUrl = http://localhost:8080
+
+### Crear usuario Ana
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Ana Garcia",
+  "email": "ana.reservas@example.com"
+}
+
+### Crear usuario Bruno
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nombre": "Bruno Lopez",
+  "email": "bruno.reservas@example.com"
+}
+
+### Crear película con 3 lugares
+POST {{baseUrl}}/peliculas
+Content-Type: application/json
+
+{
+  "titulo": "Interestelar",
+  "fechaProyeccion": "2026-12-20T21:00:00-03:00",
+  "capacidadTotal": 3
+}
+
+### Crear reserva de Ana por 2 lugares
+POST {{baseUrl}}/reservas
+Content-Type: application/json
+
+{
+  "usuarioId": 1,
+  "peliculaId": 1,
+  "cantidad": 2
+}
+
+### Consultar cupos después de reservar
+GET {{baseUrl}}/peliculas/1
+
+### Intentar duplicar la reserva activa
+POST {{baseUrl}}/reservas
+Content-Type: application/json
+
+{
+  "usuarioId": 1,
+  "peliculaId": 1,
+  "cantidad": 1
+}
+
+### Intentar reservar más lugares de los disponibles
+POST {{baseUrl}}/reservas
+Content-Type: application/json
+
+{
+  "usuarioId": 2,
+  "peliculaId": 1,
+  "cantidad": 2
+}
+
+### Reducir la primera reserva a 1 lugar
+PUT {{baseUrl}}/reservas/1
+Content-Type: application/json
+
+{
+  "cantidad": 1
+}
+
+### Bruno reserva los 2 lugares restantes
+POST {{baseUrl}}/reservas
+Content-Type: application/json
+
+{
+  "usuarioId": 2,
+  "peliculaId": 1,
+  "cantidad": 2
+}
+
+### Consultar cupos agotados
+GET {{baseUrl}}/peliculas/1
+
+### Listar todas las reservas
+GET {{baseUrl}}/reservas
+
+### Filtrar reservas activas
+GET {{baseUrl}}/reservas?estado=activa
+
+### Consultar reserva por ID
+GET {{baseUrl}}/reservas/1
+
+### Cancelar la reserva de Ana
+PUT {{baseUrl}}/reservas/1
+Content-Type: application/json
+
+{
+  "estado": "cancelada"
+}
+
+### Comprobar que se devolvió 1 lugar
+GET {{baseUrl}}/peliculas/1
+
+### Cancelar nuevamente sin devolver cupos de más
+PUT {{baseUrl}}/reservas/1
+Content-Type: application/json
+
+{
+  "estado": "cancelada"
+}
+
+### Comprobar que los cupos siguen iguales
+GET {{baseUrl}}/peliculas/1
+
+### Intentar modificar una reserva cancelada
+PUT {{baseUrl}}/reservas/1
+Content-Type: application/json
+
+{
+  "cantidad": 2
+}
+
+### Intentar eliminar usuario que tiene reservas
+DELETE {{baseUrl}}/usuarios/1
+
+### Intentar eliminar película que tiene reservas
+DELETE {{baseUrl}}/peliculas/1
+
+### Eliminar reserva activa de Bruno
+DELETE {{baseUrl}}/reservas/2
+
+### Verificar devolución de sus 2 lugares
+GET {{baseUrl}}/peliculas/1
+
+### Eliminar reserva cancelada de Ana
+DELETE {{baseUrl}}/reservas/1
+
+### Eliminar usuario Ana sin reservas asociadas
+DELETE {{baseUrl}}/usuarios/1
+
+### Consultar reserva eliminada
+GET {{baseUrl}}/reservas/1
+
+### Consultar ID inválido
+GET {{baseUrl}}/reservas/abc

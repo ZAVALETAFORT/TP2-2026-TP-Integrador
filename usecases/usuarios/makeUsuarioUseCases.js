@@ -9,17 +9,13 @@ function makeUsuarioUseCases(dao) {
   return {
     getUsuarios: () => getUsuarios(dao),
 
-    getUsuarioById: (id) =>
-      getUsuarioById(id, dao),
+    getUsuarioById: (id) => getUsuarioById(id, dao),
 
-    createUsuario: (data) =>
-      createUsuario(data, dao),
+    createUsuario: (data) => createUsuario(data, dao),
 
-    updateUsuario: (id, changes) =>
-      updateUsuario(id, changes, dao),
+    updateUsuario: (id, changes) => updateUsuario(id, changes, dao),
 
-    deleteUsuario: (id) =>
-      deleteUsuario(id, dao)
+    deleteUsuario: (id) => deleteUsuario(id, dao),
   };
 }
 

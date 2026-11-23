@@ -1,5 +1,6 @@
 @baseUrl = http://localhost:8080
 
+
 ### 1. Listar todas las películas
 GET {{baseUrl}}/peliculas
 Accept: application/json
@@ -25,6 +26,7 @@ Content-Type: application/json
   "fechaProyeccion": "fecha-invalida",
   "capacidadTotal": -10
 }
+
 
 ### 4. Buscar película existente — 200
 GET {{baseUrl}}/peliculas/1
@@ -58,6 +60,7 @@ Content-Type: application/json
 {
   "capacidadTotal": -10
 }
+
 
 ### 9. Eliminar película — 204
 DELETE {{baseUrl}}/peliculas/1
