@@ -1,6 +1,6 @@
-// Elimina la reserva y restituye los cupos si estaba activa.
+// Elimina la reserva y restituye cupos si todavía estaba activa.
 async function deleteReserva(id, dao) {
-  return dao.eliminar(id);
+  return dao.delete(id);
 }
 
 export default deleteReserva;

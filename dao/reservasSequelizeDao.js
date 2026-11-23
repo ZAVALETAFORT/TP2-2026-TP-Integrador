@@ -9,13 +9,13 @@ import {
 
 import AppError from "../errors/AppError.js";
 
+// Convierte el resultado de Sequelize en un objeto JavaScript plano.
 function toPlain(reserva) {
-  if (!reserva) return null;
-
-  return reserva.get({ plain: true });
+  return reserva ? reserva.get({ plain: true }) : null;
 }
 
 class ReservasSequelizeDao {
+  // Lista reservas aplicando filtros opcionales.
   async getAll({ usuarioId, peliculaId, estado } = {}) {
     const where = {};
 
@@ -39,12 +39,12 @@ class ReservasSequelizeDao {
     return reservas.map(toPlain);
   }
 
+  // Consulta una reserva por ID.
   async getById(id) {
-    const reserva = await ReservaModel.findByPk(id);
-
-    return toPlain(reserva);
+    return toPlain(await ReservaModel.findByPk(id));
   }
 
+  // Busca una reserva activa de un usuario para una película.
   async getActive(usuarioId, peliculaId) {
     const reserva = await ReservaModel.findOne({
       where: {
@@ -57,33 +57,9 @@ class ReservasSequelizeDao {
     return toPlain(reserva);
   }
 
-  // Guardado básico, sin modificar cupos.
-  async save(data) {
-    try {
-      const reserva = await ReservaModel.create({
-        usuarioId: Number(data.usuarioId),
-        peliculaId: Number(data.peliculaId),
-        cantidad: data.cantidad,
-        estado: data.estado ?? "activa",
-      });
-
-      return toPlain(reserva);
-    } catch (error) {
-      if (error instanceof UniqueConstraintError) {
-        throw new AppError(
-          "RESERVA_DUPLICADA",
-          "El usuario ya tiene una reserva activa para esta película",
-          409,
-        );
-      }
-
-      throw error;
-    }
-  }
-
-  // Descuenta cupos y crea la reserva dentro de una transacción.
+  // Confirma la reserva y descuenta los cupos en una transacción.
   async reservar({ usuarioId, peliculaId, cantidad }) {
-    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+    if (!Number.isSafeInteger(cantidad) || cantidad <= 0) {
       throw new AppError(
         "CANTIDAD_INVALIDA",
         "La cantidad debe ser un entero positivo",
@@ -132,7 +108,7 @@ class ReservasSequelizeDao {
           );
         }
 
-        // El UPDATE condicional impide descontar más cupos de los disponibles.
+        // Descuenta solamente cuando hay suficientes lugares.
         const [afectadas] = await PeliculaModel.update(
           {
             cuposDisponibles: literal(`"cuposDisponibles" - ${cantidad}`),
@@ -148,7 +124,7 @@ class ReservasSequelizeDao {
           },
         );
 
-        if (afectadas === 0) {
+        if (afectadas !== 1) {
           throw new AppError(
             "CUPOS_INSUFICIENTES",
             "No hay suficientes cupos disponibles",
@@ -183,7 +159,7 @@ class ReservasSequelizeDao {
     }
   }
 
-  // Cambia la cantidad y ajusta los cupos en una sola transacción.
+  // Modifica la cantidad y ajusta la diferencia de cupos en una transacción.
   async cambiarCantidad(id, cantidad) {
     if (!Number.isSafeInteger(cantidad) || cantidad <= 0) {
       throw new AppError(
@@ -212,12 +188,10 @@ class ReservasSequelizeDao {
 
       const diferencia = cantidad - reserva.cantidad;
 
-      // Al aumentar, exige cupos suficientes; al reducir, evita superar capacidad.
+      // Al aumentar exige cupos; al reducir no supera la capacidad.
       const condicionCupos =
         diferencia > 0
-          ? {
-              [Op.gte]: diferencia,
-            }
+          ? { [Op.gte]: diferencia }
           : {
               [Op.lte]: literal(`"capacidadTotal" - ${-diferencia}`),
             };
@@ -235,17 +209,17 @@ class ReservasSequelizeDao {
         },
       );
 
-      if (afectadas === 0) {
+      if (afectadas !== 1) {
         throw new AppError(
           diferencia > 0 ? "CUPOS_INSUFICIENTES" : "CUPOS_INCONSISTENTES",
           diferencia > 0
             ? "No hay suficientes cupos disponibles"
-            : "No se pueden devolver los cupos solicitados",
+            : "No se pudieron devolver los cupos",
           409,
         );
       }
 
-      // Solo actualiza si la cantidad anterior y el estado siguen iguales.
+      // Evita modificar una reserva cuyos datos ya cambiaron.
       const [actualizadas] = await ReservaModel.update(
         { cantidad },
         {
@@ -269,54 +243,125 @@ class ReservasSequelizeDao {
       return reserva.id;
     });
 
-    if (reservaId === null) return null;
-
-    return this.getById(reservaId);
+    return reservaId === null ? null : this.getById(reservaId);
   }
 
-  // Actualización básica; no coordina cupos.
-  async update(id, changes) {
-    const reserva = await ReservaModel.findByPk(id);
+  // Cancela y devuelve los cupos una sola vez mediante una transacción.
+  async cancelar(id) {
+    const reservaId = await sequelize.transaction(async (transaction) => {
+      const reserva = await ReservaModel.findByPk(id, { transaction });
 
-    if (!reserva) return null;
+      if (!reserva) return null;
 
-    const cambios = {};
+      if (reserva.estado === "cancelada") {
+        return reserva.id;
+      }
 
-    if (changes.cantidad !== undefined) {
-      cambios.cantidad = changes.cantidad;
-    }
+      const [actualizadas] = await ReservaModel.update(
+        { estado: "cancelada" },
+        {
+          where: {
+            id: reserva.id,
+            estado: "activa",
+            cantidad: reserva.cantidad,
+          },
+          transaction,
+        },
+      );
 
-    if (changes.estado !== undefined) {
-      cambios.estado = changes.estado;
-    }
-
-    try {
-      await reserva.update(cambios);
-
-      return toPlain(reserva);
-    } catch (error) {
-      if (error instanceof UniqueConstraintError) {
+      if (actualizadas !== 1) {
         throw new AppError(
-          "RESERVA_DUPLICADA",
-          "El usuario ya tiene una reserva activa para esta película",
+          "RESERVA_MODIFICADA",
+          "La reserva fue modificada por otra operación",
           409,
         );
       }
 
-      throw error;
-    }
-  }
+      // Devuelve lugares solo si no supera la capacidad.
+      const [devueltas] = await PeliculaModel.update(
+        {
+          cuposDisponibles: literal(`"cuposDisponibles" + ${reserva.cantidad}`),
+        },
+        {
+          where: {
+            id: reserva.peliculaId,
+            cuposDisponibles: {
+              [Op.lte]: literal(`"capacidadTotal" - ${reserva.cantidad}`),
+            },
+          },
+          transaction,
+        },
+      );
 
-  // Eliminación básica; no coordina cupos.
-  async delete(id) {
-    const eliminadas = await ReservaModel.destroy({
-      where: { id: Number(id) },
+      if (devueltas !== 1) {
+        throw new AppError(
+          "CUPOS_INCONSISTENTES",
+          "No se pudieron devolver los cupos",
+          409,
+        );
+      }
+
+      return reserva.id;
     });
 
-    return eliminadas > 0;
+    return reservaId === null ? null : this.getById(reservaId);
+  }
+
+  // Elimina y devuelve cupos únicamente si la reserva estaba activa.
+  async delete(id) {
+    return sequelize.transaction(async (transaction) => {
+      const reserva = await ReservaModel.findByPk(id, { transaction });
+
+      if (!reserva) return false;
+
+      if (reserva.estado === "activa") {
+        const [devueltas] = await PeliculaModel.update(
+          {
+            cuposDisponibles: literal(
+              `"cuposDisponibles" + ${reserva.cantidad}`,
+            ),
+          },
+          {
+            where: {
+              id: reserva.peliculaId,
+              cuposDisponibles: {
+                [Op.lte]: literal(`"capacidadTotal" - ${reserva.cantidad}`),
+              },
+            },
+            transaction,
+          },
+        );
+
+        if (devueltas !== 1) {
+          throw new AppError(
+            "CUPOS_INCONSISTENTES",
+            "No se pudieron devolver los cupos",
+            409,
+          );
+        }
+      }
+
+      // Elimina solo si la reserva conserva su cantidad y estado.
+      const eliminadas = await ReservaModel.destroy({
+        where: {
+          id: reserva.id,
+          cantidad: reserva.cantidad,
+          estado: reserva.estado,
+        },
+        transaction,
+      });
+
+      if (eliminadas !== 1) {
+        throw new AppError(
+          "RESERVA_MODIFICADA",
+          "La reserva fue modificada por otra operación",
+          409,
+        );
+      }
+
+      return true;
+    });
   }
 }
 
 export default new ReservasSequelizeDao();
-
-//lLEGUE HASTA FASE 3.3a Modificar cantidad	Pendiente de ejecutar QA

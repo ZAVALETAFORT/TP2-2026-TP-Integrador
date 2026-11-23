@@ -5,17 +5,13 @@ import updateUsuario from "./updateUsuario.js";
 import deleteUsuario from "./deleteUsuario.js";
 //Vinculacion de los useCases con los DAO
 // Factory: inyecta el DAO en los casos de uso.
-function makeUsuarioUseCases(dao) {
+function makeUsuarioUseCases(dao, reservasDao) {
   return {
     getUsuarios: () => getUsuarios(dao),
-
     getUsuarioById: (id) => getUsuarioById(id, dao),
-
     createUsuario: (data) => createUsuario(data, dao),
-
     updateUsuario: (id, changes) => updateUsuario(id, changes, dao),
-
-    deleteUsuario: (id) => deleteUsuario(id, dao),
+    deleteUsuario: (id) => deleteUsuario(id, dao, reservasDao),
   };
 }
 

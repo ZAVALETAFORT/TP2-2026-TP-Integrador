@@ -1,23 +1,21 @@
-import getReservas from "./getReservas.js";
-import getReservaById from "./getReservaById.js";
-import createReserva from "./createReserva.js";
-import updateReserva from "./updateReserva.js";
-import deleteReserva from "./deleteReserva.js";
+import getUsuarios from "./getUsuarios.js";
+import getUsuarioById from "./getUsuarioById.js";
+import createUsuario from "./createUsuario.js";
+import updateUsuario from "./updateUsuario.js";
+import deleteUsuario from "./deleteUsuario.js";
 
-// Conecta los DAO con cada caso de uso de Reservas.
-function makeReservaUseCases({ reservasDao, peliculasDao, usuariosDao }) {
+// Conecta los casos de uso de Usuarios con sus DAO.
+function makeUsuarioUseCases(dao, reservasDao) {
   return {
-    getReservas: (filters) => getReservas(filters, reservasDao),
+    getUsuarios: () => getUsuarios(dao),
+    getUsuarioById: (id) => getUsuarioById(id, dao),
+    createUsuario: (data) => createUsuario(data, dao),
+    updateUsuario: (id, changes) => updateUsuario(id, changes, dao),
 
-    getReservaById: (id) => getReservaById(id, reservasDao),
-
-    createReserva: (data) =>
-      createReserva(data, reservasDao, peliculasDao, usuariosDao),
-
-    updateReserva: (id, changes) => updateReserva(id, changes, reservasDao),
-
-    deleteReserva: (id) => deleteReserva(id, reservasDao),
+    // Verifica reservas antes de permitir la eliminación.
+    deleteUsuario: (id) => deleteUsuario(id, dao, reservasDao),
+    
   };
 }
 
-export default makeReservaUseCases;
+export default makeUsuarioUseCases;

@@ -37,7 +37,8 @@ async function buildContainer() {
   // Construye los casos de uso inyectando los DAO que necesitan.
   const peliculasUseCases = makePeliculaUseCases(peliculasDao, reservasDao);
   const usuariosUseCases = makeUsuarioUseCases(usuariosDao, reservasDao);
-  const reservasUseCases = makeReservaUseCases(reservasDao,peliculasDao,usuariosDao);
+  //Aca le paso los 3 DAOs OBJETO a los makers
+  const reservasUseCases = makeReservaUseCases({reservasDao,peliculasDao,usuariosDao});
 
   // Instancio los Controllers con los casos de uso que necesitan.
   const peliculasController = new PeliculasController(peliculasUseCases);
