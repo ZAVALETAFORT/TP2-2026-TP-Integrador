@@ -1,21 +1,28 @@
-import getUsuarios from "./getUsuarios.js";
-import getUsuarioById from "./getUsuarioById.js";
-import createUsuario from "./createUsuario.js";
-import updateUsuario from "./updateUsuario.js";
-import deleteUsuario from "./deleteUsuario.js";
+import getReservas from "./getReservas.js";
+import getReservaById from "./getReservaById.js";
+import createReserva from "./createReserva.js";
+import updateReserva from "./updateReserva.js";
+import deleteReserva from "./deleteReserva.js";
 
-// Conecta los casos de uso de Usuarios con sus DAO.
-function makeUsuarioUseCases(dao, reservasDao) {
+// Conecta los DAO con los casos de uso de Reservas.
+function makeReservaUseCases({ reservasDao, peliculasDao, usuariosDao }) {
   return {
-    getUsuarios: () => getUsuarios(dao),
-    getUsuarioById: (id) => getUsuarioById(id, dao),
-    createUsuario: (data) => createUsuario(data, dao),
-    updateUsuario: (id, changes) => updateUsuario(id, changes, dao),
+    // Lista las reservas aplicando filtros.
+    getReservas: (filters) => getReservas(filters, reservasDao),
 
-    // Verifica reservas antes de permitir la eliminación.
-    deleteUsuario: (id) => deleteUsuario(id, dao, reservasDao),
-    
+    // Consulta una reserva por ID.
+    getReservaById: (id) => getReservaById(id, reservasDao),
+
+    // Crea una reserva validando usuario, película y cupos.
+    createReserva: (data) =>
+      createReserva(data, reservasDao, peliculasDao, usuariosDao),
+
+    // Modifica la cantidad o cancela una reserva.
+    updateReserva: (id, changes) => updateReserva(id, changes, reservasDao),
+
+    // Elimina una reserva.
+    deleteReserva: (id) => deleteReserva(id, reservasDao),
   };
 }
 
-export default makeUsuarioUseCases;
+export default makeReservaUseCases;
