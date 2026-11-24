@@ -9,6 +9,8 @@ import {
   getReservasDao,
 } from "../dao/daoFactory.js";
 
+import seedMockData from "../data/mock.js";
+
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
 import makeUsuarioUseCases from "../usecases/usuarios/makeUsuarioUseCases.js";
 import makeReservaUseCases from "../usecases/reservas/makeReservaUseCases.js";
@@ -58,6 +60,15 @@ async function buildContainer() {
     events,
   });
 
+  //Mock de precarga
+  if (MOCK_ENABLED) {
+    await seedMockData({
+      usuariosUseCases,
+      peliculasUseCases,
+      reservasUseCases,
+    });
+  }
+
   // Construye los Controllers con los casos de uso.
   const peliculasController = new PeliculasController(peliculasUseCases);
   const usuariosController = new UsuariosController(usuariosUseCases);
@@ -71,7 +82,7 @@ async function buildContainer() {
   router.use("/usuarios", createUsuariosRoutes(usuariosController));
   router.use("/reservas", createReservasRoutes(reservasController));
 
-  // Publica Swagger y OpenAPI si estoy en DEV
+  // Publica Swagger y OpenAPI cuando la docu está habilitada.
   if (DOCS_ENABLED) {
     router.use(createDocsRoutes(buildOpenApiSpec()));
   }

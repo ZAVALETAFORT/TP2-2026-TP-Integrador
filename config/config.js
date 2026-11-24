@@ -1,6 +1,10 @@
 // Config centralizada de la API.
 
+//Puerto por defecto 
 const PORT = Number(process.env.PORT ?? 8080);
+
+//Entorno por defecto 
+const NODE_ENV = process.env.NODE_ENV ?? "development";
 
 // Por default uso SQLite.
 // También se permite "memory".
@@ -9,7 +13,7 @@ const PERSISTENCE_TYPE = process.env.PERSISTENCE_TYPE ?? "sequelize";
 // Ruta del archivo SQLite.
 const SQLITE_STORAGE = process.env.SQLITE_STORAGE ?? "data/cine.sqlite";
 
-// Apaga-prende swagger y OpenAPI 
+// Apaga-prende swagger y OpenAPI
 const DOCS_ENABLED = (process.env.DOCS_ENABLED ?? (NODE_ENV === "production" ? "false" : "true")) === "true";
 
 // Validar el puerto.
@@ -23,4 +27,4 @@ if (!["memory", "sequelize"].includes(PERSISTENCE_TYPE)) {
 }
 
 // Exportar la configuración.
-export { PORT, PERSISTENCE_TYPE, SQLITE_STORAGE, DOCS_ENABLED };
+export { PORT, NODE_ENV, PERSISTENCE_TYPE, SQLITE_STORAGE, DOCS_ENABLED };

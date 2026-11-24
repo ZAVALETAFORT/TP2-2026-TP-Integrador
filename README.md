@@ -1,8 +1,7 @@
-
 # TP2 — API REST de Reservas de Cine
 
-**Trabajo Práctico Integrador — Taller de Programación 2**  
-**Grupo 3:** Moises Zavaleta  
+**Trabajo Práctico Integrador — Taller de Programación 2**
+**Grupo 3:** Moises Zavaleta
 **Repositorio:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
 
 ## 1. Descripción
@@ -84,16 +83,16 @@ Implementadas:
 - No se permite reducir la capacidad por debajo de los lugares ocupados.
 - Los errores de validación utilizan Zod.
 - Los errores de negocio se representan mediante AppError.
+- Se verifica que existan el usuario y la película al reservar.
+- Se controla la disponibilidad de cupos.
+- Se impiden dos reservas activas del mismo usuario para la misma película.
+- Se descuentan cupos al reservar.
+- Se devuelven cupos una sola vez al cancelar.
+- Se ajustan los cupos al cambiar la cantidad de la reserva.
+- Se impide eliminar usuarios o películas con reservas asociadas.
 
-Pendientes de integrar con Reservas:
+Pendiente:
 
-- Verificar que existan el usuario y la película.
-- Controlar la disponibilidad de cupos.
-- Impedir dos reservas activas del mismo usuario para la misma película.
-- Descontar cupos al reservar.
-- Devolver cupos una sola vez al cancelar.
-- Ajustar cupos al cambiar la cantidad.
-- Impedir eliminar usuarios o películas con reservas asociadas.
 - Aplicar permisos según el usuario autenticado.
 
 Las reglas de negocio deben permanecer en los Use Cases.
@@ -108,12 +107,16 @@ container/            Inyección de dependencias
 dao/                  DAO Memory y DAO Sequelize
 dao/models/           Modelos y relaciones SQL
 controllers/          Entrada y salida HTTP
-routes/               Endpoints
+routes/               Endpoints y Swagger UI
 usecases/             Reglas de negocio
 schemas/              Validación Zod
 middlewares/          Validaciones y errores
 errors/               AppError
-postman/              Pruebas HTTP
+events/               Bus y nombres de eventos
+alerts/               Listeners
+notifications/         Notificador por consola
+docs/                  Contrato OpenAPI 3.1
+postman/               Pruebas HTTP
 ```
 
 ### DAO Factory
@@ -180,17 +183,20 @@ No se requiere instalar SQLite por separado ni ejecutar comandos SQL manuales.
 
 ## 6. Configuración
 
-Valores predeterminados:
+Variables documentadas en `.env.example`:
 
-| Variable | Valor |
-|---|---|
-| `PORT` | `8080` |
-| `PERSISTENCE_TYPE` | `sequelize` |
-| `SQLITE_STORAGE` | `data/cine.sqlite` |
 
-El archivo `.env.example` documenta estas variables.
+| Variable           | Valor predeterminado                         | Descripción                                                                                   |
+| -------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `PORT`             | `8080`                                       | Puerto HTTP de la aplicación (8080 en el config default)                                      |
+| `NODE_ENV`         | `development`                                | Entorno de ejecución: `development`, `production` o `test`.                                   |
+| `PERSISTENCE_TYPE` | `sequelize`                                  | Adaptador de persistencia: `memory` (arrays) o `sequelize` (SQLite).                           |
+| `SQLITE_STORAGE`   | `data/cine.sqlite`                           | Ruta del archivo SQLite cuando se utiliza Sequelize; `:memory:` para una base temporal en RAM. |
+| `DOCS_ENABLED`     | `true` en desarrollo; `false` en producción | Habilita o deshabilita Swagger UI (`/api-docs`) y el contrato (`/openapi.json`).               |
 
-El archivo `.env` es opcional y permite sobrescribir los valores predeterminados.
+El archivo `.env` es opcional y permite sobrescribir los valores predeterminados. No se versiona en Git.
+
+**Documentación:** si `DOCS_ENABLED` no está definido, se habilita automáticamente en `development` y se deshabilita en `production`. Un valor explícito `DOCS_ENABLED=true` o `DOCS_ENABLED=false` tiene prioridad sobre `NODE_ENV`. Si se copia `.env.example` a `.env` (`DOCS_ENABLED=true`), la documentación de OpenAPI y Swagger se habilita aunque sea `production`.
 
 ### SQLite persistente
 
@@ -216,6 +222,15 @@ PERSISTENCE_TYPE=sequelize SQLITE_STORAGE=:memory: npm start
 
 Este último modo utiliza SQLite en RAM. No equivale al DAO Memory implementado con arrays.
 
+### Activar o desactivar Swagger
+
+```bash
+DOCS_ENABLED=true npm start
+DOCS_ENABLED=false npm start
+```
+
+La configuración se aplica al iniciar el servidor. Con la documentación deshabilitada, `/api-docs` y `/openapi.json` responden `404`; los endpoints de negocio permanecen activos.
+
 ## 7. Endpoints implementados
 
 ### Salud
@@ -238,7 +253,15 @@ Este último modo utiliza SQLite en RAM. No equivale al DAO Memory implementado 
 - `PUT /usuarios/:id`
 - `DELETE /usuarios/:id`
 
-Actualmente las rutas permiten probar los CRUD y sus validaciones. La autorización por roles se incorporará en una fase posterior.
+### Reservas
+
+- `GET /reservas`
+- `GET /reservas/:id`
+- `POST /reservas`
+- `PUT /reservas/:id`
+- `DELETE /reservas/:id`
+
+Las rutas permiten probar los CRUD y sus validaciones. La autorización por roles se incorporará en una fase posterior. La especificación completa de los endpoints está en `/api-docs`.
 
 ## 8. Validaciones y errores
 
@@ -259,13 +282,11 @@ Se utilizan los códigos HTTP correspondientes a cada operación, incluidos `200
 
 ## 9. Eventos
 
-Se implementará un evento de dominio mediante EventEmitter:
+Se implementó el evento de dominio `reserva.creada` mediante `EventEmitter`.
 
-`reserva.creada`
+Después de guardar correctamente una reserva, el caso de uso emite el evento. Un listener independiente utiliza `consoleNotifier` para mostrar una notificación en la consola del servidor.
 
-Un listener independiente enviará una notificación a consola mediante un notificador.
-
-Los errores del listener no deben impedir confirmar una reserva ya guardada.
+El listener captura los errores del notificador para que un fallo al notificar no afecte una reserva ya confirmada.
 
 ## 10. Autenticación y permisos
 
@@ -292,13 +313,16 @@ Todavía no está implementada.
 
 ## 12. Documentación
 
-Se publicará documentación OpenAPI 3 mediante Swagger UI en:
+Se integró OpenAPI 3.1 con Swagger UI en:
 
-`/api-docs`
+- **Swagger UI:** `http://localhost:8080/api-docs/`
+- **Contrato OpenAPI:** `http://localhost:8080/openapi.json`
 
-La documentación incluirá los endpoints, parámetros, ejemplos, respuestas y errores.
+Documenta las 16 operaciones de Salud, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
 
-**Pendiente de implementación.**
+Los schemas Zod de entrada se reutilizan para generar la documentación. Swagger UI permite utilizar *Try it out* sobre las rutas reales de la API. Las rutas de documentación se montan solamente si `DOCS_ENABLED` está habilitado.
+
+La comprobación funcional completa de *Try it out* en ambos modos de persistencia continúa pendiente de QA.
 
 ## 13. Pruebas
 
@@ -314,15 +338,20 @@ Pruebas completadas durante el desarrollo:
 - Inyección de Controllers.
 - Pruebas HTTP de creación, consulta y errores.
 - Respuesta HTTP 409 para emails duplicados.
+- Pruebas de Reservas en ambos modos, con solicitudes registradas en consola.
+- Emisión del evento `reserva.creada` en Memory y Sequelize.
+- Comprobación de que un fallo simulado del notificador es capturado por el listener.
+- Comprobación de OpenAPI 3.1, sus 16 operaciones y referencias de schemas.
+- Comprobaciones HTTP 200 de Swagger y OpenAPI habilitados y HTTP 404 cuando se deshabilitan explícitamente.
 
 Pruebas pendientes:
 
 - Instalación desde un clon limpio.
-- Reservas y control de cupos.
-- Concurrencia y transacciones.
-- Autenticación y autorización.
-- Eventos.
-- Swagger.
+- Validación HTTP completa de estados y cupos en ambas persistencias.
+- Pruebas de concurrencia y transacciones con peticiones simultáneas.
+- Autenticación y autorización, cuando se implementen.
+- Prueba funcional integral de *Try it out* desde Swagger UI en ambos modos.
+- Verificación del comportamiento predeterminado de Swagger según `NODE_ENV` después de corregir la configuración.
 
 ## 14. Archivos excluidos del repositorio
 
@@ -340,8 +369,8 @@ El archivo `.env.example` sí debe versionarse.
 
 **En desarrollo.**
 
-Completados: modelos, persistencia básica de Películas y Usuarios, DAO Factory, Container e integración HTTP.
+Completados: modelos y relaciones, CRUD de Películas, Usuarios y Reservas, persistencia Memory/Sequelize, DAO Factory, Container, eventos y documentación Swagger/OpenAPI integrada.
 
-Pendientes: Reservas, Eventos, Autenticación, Swagger y QA final desde clon limpio.
+Pendientes: validar la configuración predeterminada de Swagger tras la corrección en `config.js`, QA funcional completo, autenticación y permisos previstos en el README y precarga de datos.
 
-La rama de trabajo es `develop`. La integración final a `main` se realizará después de completar las pruebas.
+La rama de trabajo es `develop`. Se realizan integraciones incrementales a `main` después de validar cada fase
