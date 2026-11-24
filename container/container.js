@@ -1,9 +1,13 @@
 import { Router } from "express";
 
-import { PERSISTENCE_TYPE } from "../config/config.js";
+import { PERSISTENCE_TYPE, DOCS_ENABLED } from "../config/config.js";
 import { sequelize } from "../dao/models/index.js";
 
-import {getPeliculasDao, getUsuariosDao, getReservasDao} from "../dao/daoFactory.js";
+import {
+  getPeliculasDao,
+  getUsuariosDao,
+  getReservasDao,
+} from "../dao/daoFactory.js";
 
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
 import makeUsuarioUseCases from "../usecases/usuarios/makeUsuarioUseCases.js";
@@ -22,6 +26,10 @@ import healthRoutes from "../routes/healthRoutes.js";
 import createEventBus from "../events/eventBus.js";
 import consoleNotifier from "../notifications/consoleNotifier.js";
 import registerAlertListeners from "../alerts/registerAlertListeners.js";
+
+//Swagger y OpenAPI
+import buildOpenApiSpec from "../docs/openapi.js";
+import createDocsRoutes from "../routes/docsRoutes.js";
 
 // Construye las dependencias y devuelve el Router principal.
 async function buildContainer() {
@@ -62,6 +70,11 @@ async function buildContainer() {
   router.use("/peliculas", createPeliculasRoutes(peliculasController));
   router.use("/usuarios", createUsuariosRoutes(usuariosController));
   router.use("/reservas", createReservasRoutes(reservasController));
+
+  // Publica Swagger y OpenAPI si estoy en DEV
+  if (DOCS_ENABLED) {
+    router.use(createDocsRoutes(buildOpenApiSpec()));
+  }
 
   return router;
 }
