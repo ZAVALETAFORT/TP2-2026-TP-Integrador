@@ -5,12 +5,12 @@ import updateUsuario from "./updateUsuario.js";
 import deleteUsuario from "./deleteUsuario.js";
 
 // Conecta los casos de uso de Usuarios con sus DAO.
-function makeUsuarioUseCases(dao, reservasDao) {
+function makeUsuarioUseCases(dao, reservasDao, hasher) {
   return {
 
     getUsuarios: () => getUsuarios(dao),
     getUsuarioById: (id) => getUsuarioById(id, dao),
-    createUsuario: (data) => createUsuario(data, dao),
+    createUsuario: (data) => createUsuario(data, dao, hasher),
     updateUsuario: (id, changes) => updateUsuario(id, changes, dao),
     deleteUsuario: (id) => deleteUsuario(id, dao, reservasDao),
   };

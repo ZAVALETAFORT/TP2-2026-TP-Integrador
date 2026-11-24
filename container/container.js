@@ -1,8 +1,16 @@
 import { Router } from "express";
 import healthRoutes from "../routes/healthRoutes.js";
-import { PERSISTENCE_TYPE, DOCS_ENABLED, MOCK_ENABLED } from "../config/config.js";
+import {
+  PERSISTENCE_TYPE,
+  DOCS_ENABLED,
+  MOCK_ENABLED,
+} from "../config/config.js";
 import { sequelize } from "../dao/models/index.js";
-import { getPeliculasDao, getUsuariosDao, getReservasDao } from "../dao/daoFactory.js";
+import {
+  getPeliculasDao,
+  getUsuariosDao,
+  getReservasDao,
+} from "../dao/daoFactory.js";
 import seedMockData from "../data/mock.js";
 
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
@@ -26,6 +34,12 @@ import registerAlertListeners from "../alerts/registerAlertListeners.js";
 import buildOpenApiSpec from "../docs/openapi.js";
 import createDocsRoutes from "../routes/docsRoutes.js";
 
+//Hasher y validación de contraseñas
+import { BCRYPT_ROUNDS } from "../config/config.js";
+import createPasswordHasher from "../security/passwordHasher.js";
+import AuthController from "../controllers/AuthController.js";
+import createAuthRoutes from "../routes/authRoutes.js";
+
 // Construye las dependencias y devuelve el Router principal.
 async function buildContainer() {
   // Inicializa SQLite si corresponde.
@@ -34,18 +48,25 @@ async function buildContainer() {
     console.log("[SQLite] Base de datos inicializada");
   }
 
-  // Selecciona los DAO según la persistencia configurada.
-  const peliculasDao = getPeliculasDao();
-  const usuariosDao = getUsuariosDao();
-  const reservasDao = getReservasDao();
+  // Hasher al crear usuarios
+  const hasher = createPasswordHasher({ rounds: BCRYPT_ROUNDS });
 
   // Crea el bus de eventos y registra su listener.
   const events = createEventBus();
   registerAlertListeners(events, consoleNotifier);
 
+  // Selecciona los DAO según la persistencia configurada.
+  const peliculasDao = getPeliculasDao();
+  const usuariosDao = getUsuariosDao();
+  const reservasDao = getReservasDao();
+
   // Construye los casos de uso e inyecta sus dependencias.
   const peliculasUseCases = makePeliculaUseCases(peliculasDao, reservasDao);
-  const usuariosUseCases = makeUsuarioUseCases(usuariosDao, reservasDao);
+  const usuariosUseCases = makeUsuarioUseCases(
+    usuariosDao,
+    reservasDao,
+    hasher,
+  );
   const reservasUseCases = makeReservaUseCases({
     reservasDao,
     peliculasDao,
@@ -66,6 +87,7 @@ async function buildContainer() {
   const peliculasController = new PeliculasController(peliculasUseCases);
   const usuariosController = new UsuariosController(usuariosUseCases);
   const reservasController = new ReservasController(reservasUseCases);
+  const authController = new AuthController({ register: usuariosUseCases.createUsuario });
 
   // Registra los endpoints existentes.
   const router = Router();
@@ -74,6 +96,7 @@ async function buildContainer() {
   router.use("/peliculas", createPeliculasRoutes(peliculasController));
   router.use("/usuarios", createUsuariosRoutes(usuariosController));
   router.use("/reservas", createReservasRoutes(reservasController));
+  router.use("/auth", createAuthRoutes(authController));
 
   // Publica Swagger y OpenAPI cuando la docu está habilitada.
   if (DOCS_ENABLED) {

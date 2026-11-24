@@ -19,10 +19,24 @@ if (!["memory", "sequelize"].includes(PERSISTENCE_TYPE)) {
 const SQLITE_STORAGE = process.env.SQLITE_STORAGE ?? "data/cine.sqlite";
 
 // Apaga-prende swagger y OpenAPI
-const DOCS_ENABLED = (process.env.DOCS_ENABLED ?? (NODE_ENV === "production" ? "false" : "true")) === "true";
+const DOCS_ENABLED =
+  (process.env.DOCS_ENABLED ??
+    (NODE_ENV === "production" ? "false" : "true")) === "true";
 
 //Precarga con mock de datos
-const MOCK_ENABLED = (process.env.MOCK_ENABLED ?? (NODE_ENV === "production" ? "false" : "true")) === "true";
+const MOCK_ENABLED =
+  (process.env.MOCK_ENABLED ??
+    (NODE_ENV === "production" ? "false" : "true")) === "true";
 
-// Exportar la configuración.
-export { PORT, NODE_ENV, PERSISTENCE_TYPE, SQLITE_STORAGE, DOCS_ENABLED, MOCK_ENABLED };
+// Costo del hash bcrypt
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 5;
+
+export {
+  PORT,
+  NODE_ENV,
+  PERSISTENCE_TYPE,
+  SQLITE_STORAGE,
+  DOCS_ENABLED,
+  MOCK_ENABLED,
+  BCRYPT_ROUNDS
+};

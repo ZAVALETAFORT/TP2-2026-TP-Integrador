@@ -1,7 +1,7 @@
 import AppError from "../../errors/AppError.js";
 
 // Caso de uso: crear usuario.
-async function createUsuario(data, dao) {
+async function createUsuario(data, dao, hasher) {
 
   // Normalizamos el email.
   const email = data.email.trim().toLowerCase();
@@ -17,10 +17,14 @@ async function createUsuario(data, dao) {
     );
   }
 
+  // Calculamos el hash si se recibió una contraseña.
+const passwordHash = data.password === undefined ? null : await hasher.hash(data.password);
+
   // Solo se crean clientes desde este caso de uso.
   return dao.save({
     nombre: data.nombre,
-    email
+    email,
+    passwordHash
   });
 }
 
