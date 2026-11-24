@@ -185,14 +185,14 @@ No se requiere instalar SQLite por separado ni ejecutar comandos SQL manuales.
 
 Variables documentadas en `.env.example`:
 
-
-| Variable           | Valor predeterminado                         | Descripción                                                                                   |
-| -------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `PORT`             | `8080`                                       | Puerto HTTP de la aplicación (8080 en el config default)                                      |
-| `NODE_ENV`         | `development`                                | Entorno de ejecución: `development`, `production` o `test`.                                   |
-| `PERSISTENCE_TYPE` | `sequelize`                                  | Adaptador de persistencia: `memory` (arrays) o `sequelize` (SQLite).                           |
-| `SQLITE_STORAGE`   | `data/cine.sqlite`                           | Ruta del archivo SQLite cuando se utiliza Sequelize; `:memory:` para una base temporal en RAM. |
+| Variable           | Valor predeterminado                        | Descripción                                                                                    |
+| ------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `PORT`             | `8080`                                      | Puerto HTTP de la aplicación (8080 en el config default)                                       |
+| `NODE_ENV`         | `development`                               | Entorno de ejecución: `development`, `production` o `test`.                                    |
+| `PERSISTENCE_TYPE` | `sequelize`                                 | Adaptador de persistencia: `memory` (arrays) o `sequelize` (SQLite).                           |
+| `SQLITE_STORAGE`   | `data/cine.sqlite`                          | Ruta del archivo SQLite cuando se utiliza Sequelize; `:memory:` para una base temporal en RAM. |
 | `DOCS_ENABLED`     | `true` en desarrollo; `false` en producción | Habilita o deshabilita Swagger UI (`/api-docs`) y el contrato (`/openapi.json`).               |
+| `MOCK_ENABLED`     | `true` en desarrollo; `false` en producción | Activa la precarga automática de datos de prueba (`/data/mock.js`)                             |
 
 El archivo `.env` es opcional y permite sobrescribir los valores predeterminados. No se versiona en Git.
 
@@ -305,11 +305,19 @@ No se publicarán secretos ni contraseñas en Git.
 
 ## 11. Datos iniciales
 
-Está prevista una precarga de datos de ejemplo mediante `mock.js`.
+`data/mock.js` precarga automáticamente datos de prueba en una base vacía:
 
-La precarga deberá ser segura e idempotente, evitando duplicaciones o sobrescritura de datos al reiniciar.
+- Usuarios.
+- Películas con fechas futuras.
+- Reservas: 40 activas y 8 canceladas.
 
-Todavía no está implementada.
+Incluye salas completas, cupos disponibles, cancelaciones
+y reservas de distintos usuarios.
+
+La precarga utiliza los casos de uso existentes y no modifica
+bases que ya contengan registros.
+
+Se controla con `MOCK_ENABLED=true` o `MOCK_ENABLED=false` en el .env.
 
 ## 12. Documentación
 
@@ -320,9 +328,9 @@ Se integró OpenAPI 3.1 con Swagger UI en:
 
 Documenta las 16 operaciones de Salud, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
 
-Los schemas Zod de entrada se reutilizan para generar la documentación. Swagger UI permite utilizar *Try it out* sobre las rutas reales de la API. Las rutas de documentación se montan solamente si `DOCS_ENABLED` está habilitado.
+Los schemas Zod de entrada se reutilizan para generar la documentación. Swagger UI permite utilizar _Try it out_ sobre las rutas reales de la API. Las rutas de documentación se montan solamente si `DOCS_ENABLED` está habilitado.
 
-La comprobación funcional completa de *Try it out* en ambos modos de persistencia continúa pendiente de QA.
+La comprobación funcional completa de _Try it out_ en ambos modos de persistencia continúa pendiente de QA.
 
 ## 13. Pruebas
 
@@ -350,7 +358,7 @@ Pruebas pendientes:
 - Validación HTTP completa de estados y cupos en ambas persistencias.
 - Pruebas de concurrencia y transacciones con peticiones simultáneas.
 - Autenticación y autorización, cuando se implementen.
-- Prueba funcional integral de *Try it out* desde Swagger UI en ambos modos.
+- Prueba funcional integral de _Try it out_ desde Swagger UI en ambos modos.
 - Verificación del comportamiento predeterminado de Swagger según `NODE_ENV` después de corregir la configuración.
 
 ## 14. Archivos excluidos del repositorio
