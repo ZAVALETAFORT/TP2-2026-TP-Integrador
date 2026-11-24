@@ -1,14 +1,8 @@
 import { Router } from "express";
-
-import { PERSISTENCE_TYPE, DOCS_ENABLED } from "../config/config.js";
+import healthRoutes from "../routes/healthRoutes.js";
+import { PERSISTENCE_TYPE, DOCS_ENABLED, MOCK_ENABLED } from "../config/config.js";
 import { sequelize } from "../dao/models/index.js";
-
-import {
-  getPeliculasDao,
-  getUsuariosDao,
-  getReservasDao,
-} from "../dao/daoFactory.js";
-
+import { getPeliculasDao, getUsuariosDao, getReservasDao } from "../dao/daoFactory.js";
 import seedMockData from "../data/mock.js";
 
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
@@ -22,7 +16,6 @@ import ReservasController from "../controllers/reservasController.js";
 import createPeliculasRoutes from "../routes/peliculasRoutes.js";
 import createUsuariosRoutes from "../routes/usuariosRoutes.js";
 import createReservasRoutes from "../routes/reservasRoutes.js";
-import healthRoutes from "../routes/healthRoutes.js";
 
 // Componentes del sistema de eventos.
 import createEventBus from "../events/eventBus.js";
