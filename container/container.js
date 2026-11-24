@@ -3,11 +3,7 @@ import { Router } from "express";
 import { PERSISTENCE_TYPE } from "../config/config.js";
 import { sequelize } from "../dao/models/index.js";
 
-import {
-  getPeliculasDao,
-  getUsuariosDao,
-  getReservasDao,
-} from "../dao/daoFactory.js";
+import {getPeliculasDao, getUsuariosDao, getReservasDao} from "../dao/daoFactory.js";
 
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
 import makeUsuarioUseCases from "../usecases/usuarios/makeUsuarioUseCases.js";
@@ -22,30 +18,44 @@ import createUsuariosRoutes from "../routes/usuariosRoutes.js";
 import createReservasRoutes from "../routes/reservasRoutes.js";
 import healthRoutes from "../routes/healthRoutes.js";
 
+// Componentes del sistema de eventos.
+import createEventBus from "../events/eventBus.js";
+import consoleNotifier from "../notifications/consoleNotifier.js";
+import registerAlertListeners from "../alerts/registerAlertListeners.js";
+
 // Construye las dependencias y devuelve el Router principal.
 async function buildContainer() {
-  // Inicializa automáticamente las tablas cuando usamos SQLite.
+  // Inicializa SQLite si corresponde.
   if (PERSISTENCE_TYPE === "sequelize") {
     await sequelize.sync();
     console.log("[SQLite] Base de datos inicializada");
   }
 
+  // Selecciona los DAO según la persistencia configurada.
   const peliculasDao = getPeliculasDao();
   const usuariosDao = getUsuariosDao();
   const reservasDao = getReservasDao();
 
-  // Construye los casos de uso inyectando los DAO que necesitan.
+  // Crea el bus de eventos y registra su listener.
+  const events = createEventBus();
+  registerAlertListeners(events, consoleNotifier);
+
+  // Construye los casos de uso e inyecta sus dependencias.
   const peliculasUseCases = makePeliculaUseCases(peliculasDao, reservasDao);
   const usuariosUseCases = makeUsuarioUseCases(usuariosDao, reservasDao);
-  //Aca le paso los 3 DAOs OBJETO a los makers
-  const reservasUseCases = makeReservaUseCases({reservasDao,peliculasDao,usuariosDao});
+  const reservasUseCases = makeReservaUseCases({
+    reservasDao,
+    peliculasDao,
+    usuariosDao,
+    events,
+  });
 
-  // Instancio los Controllers con los casos de uso que necesitan.
+  // Construye los Controllers con los casos de uso.
   const peliculasController = new PeliculasController(peliculasUseCases);
   const usuariosController = new UsuariosController(usuariosUseCases);
   const reservasController = new ReservasController(reservasUseCases);
 
-  // Conecta los Controllers con sus endpoints.
+  // Registra los endpoints existentes.
   const router = Router();
 
   router.use("/health", healthRoutes);

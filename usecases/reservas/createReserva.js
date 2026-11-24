@@ -1,7 +1,15 @@
 import AppError from "../../errors/AppError.js";
+import EVENTS from "../../events/eventNames.js";
 
-// Valida las reglas del negocio y solicita confirmar la reserva.
-async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
+// Valida las reglas del negocio, crea la reserva y emite el evento.
+async function createReserva(
+  data,
+  reservasDao,
+  peliculasDao,
+  usuariosDao,
+  events,
+) {
+  // Comprueba que la cantidad sea válida.
   if (!Number.isSafeInteger(data.cantidad) || data.cantidad <= 0) {
     throw new AppError(
       "CANTIDAD_INVALIDA",
@@ -10,6 +18,7 @@ async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
     );
   }
 
+  // Verifica que exista el usuario.
   const usuario = await usuariosDao.getById(data.usuarioId);
 
   if (!usuario) {
@@ -20,6 +29,7 @@ async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
     );
   }
 
+  // Verifica que exista la película.
   const pelicula = await peliculasDao.getById(data.peliculaId);
 
   if (!pelicula) {
@@ -30,7 +40,7 @@ async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
     );
   }
 
-  // Impide que el usuario reserve dos veces la misma película.
+  // Impide duplicar una reserva activa para la misma película.
   const existente = await reservasDao.getActive(
     data.usuarioId,
     data.peliculaId,
@@ -44,6 +54,7 @@ async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
     );
   }
 
+  // Comprueba la disponibilidad de lugares.
   if (pelicula.cuposDisponibles < data.cantidad) {
     throw new AppError(
       "CUPOS_INSUFICIENTES",
@@ -52,8 +63,18 @@ async function createReserva(data, reservasDao, peliculasDao, usuariosDao) {
     );
   }
 
-  // El DAO guarda la reserva y descuenta los cupos conjuntamente.
-  return reservasDao.reservar(data);
+  // El DAO registra la reserva y descuenta los cupos.
+  const reserva = await reservasDao.reservar(data);
+
+  // Emite un evento para notificar a los listeners que se creó la reserva.
+  events.emit(EVENTS.RESERVA_CREADA, {
+    id: reserva.id,
+    usuarioId: reserva.usuarioId,
+    peliculaId: reserva.peliculaId,
+    cantidad: reserva.cantidad,
+  });
+
+  return reserva;
 }
 
 export default createReserva;
