@@ -6,7 +6,7 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new Error("PORT debe ser un puerto válido");
 }
 
-//Entorno por defecto 
+//Entorno por defecto
 const NODE_ENV = process.env.NODE_ENV ?? "development";
 
 // Persistencia y validación(Por default SQLite con Sequelize)

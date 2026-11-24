@@ -359,7 +359,7 @@ Pruebas pendientes:
 - Pruebas de concurrencia y transacciones con peticiones simultáneas.
 - Autenticación y autorización, cuando se implementen.
 - Prueba funcional integral de _Try it out_ desde Swagger UI en ambos modos.
-- Verificación del comportamiento predeterminado de Swagger según `NODE_ENV` después de corregir la configuración.
+- «Verificación del comportamiento por defecto según NODE_ENV», hasta que se ejecute esa prueba.
 
 ## 14. Archivos excluidos del repositorio
 
@@ -379,6 +379,7 @@ El archivo `.env.example` sí debe versionarse.
 
 Completados: modelos y relaciones, CRUD de Películas, Usuarios y Reservas, persistencia Memory/Sequelize, DAO Factory, Container, eventos y documentación Swagger/OpenAPI integrada.
 
-Pendientes: validar la configuración predeterminada de Swagger tras la corrección en `config.js`, QA funcional completo, autenticación y permisos previstos en el README y precarga de datos.
+Pendientes: QA funcional completo, autenticación y permisos
+previstos en el README.
 
 La rama de trabajo es `develop`. Se realizan integraciones incrementales a `main` después de validar cada fase
