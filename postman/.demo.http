@@ -1,0 +1,253 @@
+# Demo integral TP2
+# Uso Memory o SQLite temporal, MOCK_ENABLED=false.
+# Reservas: titularidad JWT pendiente; revisar evento reserva.creada en consola.
+
+@baseUrl = http://localhost:8080
+@adminEmail = admin@ort.com
+
+### 01 - Salud | 200
+GET {{baseUrl}}/health
+
+### 02 - Peliculas publicas | 200
+GET {{baseUrl}}/peliculas
+
+### 03 - Usuarios anonimos | 401 TOKEN_MISSING
+GET {{baseUrl}}/usuarios
+
+### 04 - Iniciar sesion administrador | 200; token y rol admin
+# @name loginAdmin
+# @prompt password Clave de administrador de .env
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
+}
+
+### 05 - Usuarios como admin | 200; sin passwordHash
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 06 - Registrar cliente Pedro | 201; rol cliente
+# @name registroPedro
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Pedro Demo",
+  "email": "demo.pedro.{{$guid}}@example.com",
+  "password": "PedroDemo123!"
+}
+
+### 07 - Login del cliente Pedro | 200; token; rol cliente
+# @name loginPedro
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registroPedro.response.body.$.email}}",
+  "password": "PedroDemo123!"
+}
+
+### 08 - Cliente intenta listar usuarios | 403 FORBIDDEN
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+
+### 09 - Crear pelicula sin token | 401 TOKEN_MISSING
+POST {{baseUrl}}/peliculas
+Content-Type: application/json
+
+{}
+
+### 10 - Cliente intenta crear pelicula | 403 FORBIDDEN
+POST {{baseUrl}}/peliculas
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Intrusion",
+  "fechaProyeccion": "2027-01-20T20:00:00-03:00",
+  "capacidadTotal": 3
+}
+
+### 11 - Admin crea sala de 3 lugares | 201; cuposDisponibles=3
+# @name peliculaDemo
+POST {{baseUrl}}/peliculas
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "titulo": "TP2 - Funcion demo {{$guid}}",
+  "genero": "Ciencia ficcion",
+  "fechaProyeccion": "2027-01-20T20:00:00-03:00",
+  "capacidadTotal": 3
+}
+
+### 12 - Consultar sala inicial | 200; cuposDisponibles=3
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 13 - Pedro reserva 2 butacas | 201; reserva activa
+# @name reservaPedro
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroPedro.response.body.$.id}},
+  "peliculaId": {{peliculaDemo.response.body.$.id}},
+  "cantidad": 2
+}
+
+### 14 - Verificar descuento de cupos | 200; cuposDisponibles=1
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 15 - Intentar duplicar reserva activa | 409 RESERVA_DUPLICADA
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroPedro.response.body.$.id}},
+  "peliculaId": {{peliculaDemo.response.body.$.id}},
+  "cantidad": 1
+}
+
+### 16 - Registrar segundo cliente Bruno | 201; cliente
+# @name registroBruno
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Bruno Demo",
+  "email": "demo.bruno.{{$guid}}@example.com",
+  "password": "BrunoDemo123!"
+}
+
+### 17 - Login de Bruno | 200; token de Bruno
+# @name loginBruno
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registroBruno.response.body.$.email}}",
+  "password": "BrunoDemo123!"
+}
+
+### 18 - Intentar superar los cupos | 409 CUPOS_INSUFICIENTES
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroBruno.response.body.$.id}},
+  "peliculaId": {{peliculaDemo.response.body.$.id}},
+  "cantidad": 2
+}
+
+### 19 - Disminuir reserva de Pedro a 1 | 200; cantidad=1
+PUT {{baseUrl}}/reservas/{{reservaPedro.response.body.$.id}}
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "cantidad": 1
+}
+
+### 20 - Verificar 2 cupos disponibles | 200; cuposDisponibles=2
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 21 - Bruno ocupa los dos cupos restantes | 201; activa
+# @name reservaBruno
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroBruno.response.body.$.id}},
+  "peliculaId": {{peliculaDemo.response.body.$.id}},
+  "cantidad": 2
+}
+
+### 22 - Sala agotada | 200; cuposDisponibles=0
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 23 - Reducir capacidad por debajo de ocupados | 400 CAPACIDAD_INSUFICIENTE
+PUT {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "capacidadTotal": 2
+}
+
+### 24 - Listar reservas filtradas por pelicula | 200; 2 reservas
+GET {{baseUrl}}/reservas?peliculaId={{peliculaDemo.response.body.$.id}}
+
+### 25 - Cancelar reserva de Pedro | 200; cancelada
+PUT {{baseUrl}}/reservas/{{reservaPedro.response.body.$.id}}
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "estado": "cancelada"
+}
+
+### 26 - Comprobar devolucion al cancelar | 200; cuposDisponibles=1
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 27 - Cancelar otra vez sin duplicar cupos | 200; ya cancelada
+PUT {{baseUrl}}/reservas/{{reservaPedro.response.body.$.id}}
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "estado": "cancelada"
+}
+
+### 28 - Modificar reserva cancelada | 409 RESERVA_NO_ACTIVA
+PUT {{baseUrl}}/reservas/{{reservaPedro.response.body.$.id}}
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "cantidad": 2
+}
+
+### 29 - Borrar pelicula con reservas relacionadas | 409 PELICULA_CON_RESERVAS
+DELETE {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 30 - Borrar usuario con reservas relacionadas | 409 USUARIO_CON_RESERVAS
+DELETE {{baseUrl}}/usuarios/{{registroPedro.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 31 - Eliminar reserva activa de Bruno | 204
+DELETE {{baseUrl}}/reservas/{{reservaBruno.response.body.$.id}}
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+
+### 32 - Eliminar reserva cancelada de Pedro | 204
+DELETE {{baseUrl}}/reservas/{{reservaPedro.response.body.$.id}}
+Authorization: Bearer {{loginPedro.response.body.$.token}}
+
+### 33 - Verificar capacidad totalmente liberada | 200; cuposDisponibles=3
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 34 - Eliminar pelicula sin reservas | 204
+DELETE {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 35 - Eliminar usuario Pedro | 204
+DELETE {{baseUrl}}/usuarios/{{registroPedro.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 36 - Eliminar usuario Bruno | 204
+DELETE {{baseUrl}}/usuarios/{{registroBruno.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 37 - Comprobar pelicula eliminada | 404 PELICULA_NOT_FOUND
+GET {{baseUrl}}/peliculas/{{peliculaDemo.response.body.$.id}}
+
+### 38 - Comprobar token invalido | 401 TOKEN_INVALID
+GET {{baseUrl}}/usuarios
+Authorization: Bearer token_falsificado

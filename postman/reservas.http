@@ -1,146 +1,306 @@
+# Reservas: cupos, cancelaciones, filtros y evento - ejecutar en orden.
+# Usar una base temporal; rutas de reservas aun sin control de titularidad JWT.
+
 @baseUrl = http://localhost:8080
+@adminEmail = admin@ort.com
 
-### Crear usuario Ana
-POST {{baseUrl}}/usuarios
+### 01 - Iniciar sesion administrador | 200; token y rol admin
+# @name loginAdmin
+# @prompt password Clave de administrador de .env
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "nombre": "Ana Garcia",
-  "email": "ana.reservas@example.com"
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
 }
 
-### Crear usuario Bruno
-POST {{baseUrl}}/usuarios
+### 02 - Registrar a Ana | 201
+# @name registroAna
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "nombre": "Bruno Lopez",
-  "email": "bruno.reservas@example.com"
+  "nombre": "Ana Reservas",
+  "email": "ana.reservas.{{$guid}}@example.com",
+  "password": "AnaDemo123!"
 }
 
-### Crear película con 3 lugares
+### 03 - Login Ana | 200; rol cliente
+# @name loginAna
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registroAna.response.body.$.email}}",
+  "password": "AnaDemo123!"
+}
+
+### 04 - Registrar a Bruno | 201
+# @name registroBruno
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Bruno Reservas",
+  "email": "bruno.reservas.{{$guid}}@example.com",
+  "password": "BrunoDemo123!"
+}
+
+### 05 - Login Bruno | 200
+# @name loginBruno
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{registroBruno.response.body.$.email}}",
+  "password": "BrunoDemo123!"
+}
+
+### 06 - Admin crea sala de 3 asientos | 201; 3 disponibles
+# @name crearSala
 POST {{baseUrl}}/peliculas
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "titulo": "Interestelar",
-  "fechaProyeccion": "2026-12-20T21:00:00-03:00",
+  "titulo": "Sala reserva {{$guid}}",
+  "fechaProyeccion": "2027-02-20T21:00:00-03:00",
   "capacidadTotal": 3
 }
 
-### Crear reserva de Ana por 2 lugares
+### 07 - Consultar sala inicial | 200; cuposDisponibles=3
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+
+### 08 - Ana reserva 2 asientos | 201; estado activa
+# @name reservaAna
 POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
-  "peliculaId": 1,
+  "usuarioId": {{registroAna.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
   "cantidad": 2
 }
 
-### Consultar cupos después de reservar
-GET {{baseUrl}}/peliculas/1
+### 09 - Verificar cupos tras reservar | 200; cuposDisponibles=1
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
 
-### Intentar duplicar la reserva activa
+### 10 - Intentar duplicar reserva activa | 409 RESERVA_DUPLICADA
 POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 1,
-  "peliculaId": 1,
+  "usuarioId": {{registroAna.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
   "cantidad": 1
 }
 
-### Intentar reservar más lugares de los disponibles
+### 11 - Bruno solicita 2, queda 1 | 409 CUPOS_INSUFICIENTES
 POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginBruno.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 2,
-  "peliculaId": 1,
+  "usuarioId": {{registroBruno.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
   "cantidad": 2
 }
 
-### Reducir la primera reserva a 1 lugar
-PUT {{baseUrl}}/reservas/1
+### 12 - Cantidad cero rechazada | 400 VALIDACION_ERROR
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroAna.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
+  "cantidad": 0
+}
+
+### 13 - Usuario inexistente | 404 USUARIO_NOT_FOUND
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": 999999,
+  "peliculaId": {{crearSala.response.body.$.id}},
+  "cantidad": 1
+}
+
+### 14 - Pelicula inexistente | 404 PELICULA_NOT_FOUND
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "usuarioId": {{registroAna.response.body.$.id}},
+  "peliculaId": 999999,
+  "cantidad": 1
+}
+
+### 15 - Disminuir reserva Ana de 2 a 1 | 200; cantidad 1
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
   "cantidad": 1
 }
 
-### Bruno reserva los 2 lugares restantes
+### 16 - Verificar sala con 2 cupos | 200; disponibles=2
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+
+### 17 - Bruno reserva dos cupos | 201; activa
+# @name reservaBruno
 POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginBruno.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "usuarioId": 2,
-  "peliculaId": 1,
+  "usuarioId": {{registroBruno.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
   "cantidad": 2
 }
 
-### Consultar cupos agotados
-GET {{baseUrl}}/peliculas/1
+### 18 - Comprobar cupos agotados | 200; disponibles=0
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
 
-### Listar todas las reservas
+### 19 - Exceder capacidad al aumentar reserva | 409 CUPOS_INSUFICIENTES
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "cantidad": 2
+}
+
+### 20 - Reducir capacidad por debajo de ocupados | 400 CAPACIDAD_INSUFICIENTE
+PUT {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "capacidadTotal": 2
+}
+
+### 21 - Listar todas las reservas | 200
 GET {{baseUrl}}/reservas
 
-### Filtrar reservas activas
+### 22 - Filtrar por pelicula | 200; dos filas
+GET {{baseUrl}}/reservas?peliculaId={{crearSala.response.body.$.id}}
+
+### 23 - Filtrar por Ana | 200; una fila
+GET {{baseUrl}}/reservas?usuarioId={{registroAna.response.body.$.id}}
+
+### 24 - Filtrar activas | 200
 GET {{baseUrl}}/reservas?estado=activa
 
-### Consultar reserva por ID
-GET {{baseUrl}}/reservas/1
+### 25 - Filtro estado invalido | 400 VALIDACION_ERROR
+GET {{baseUrl}}/reservas?estado=finalizada
 
-### Cancelar la reserva de Ana
-PUT {{baseUrl}}/reservas/1
+### 26 - Filtro desconocido | 400 VALIDACION_ERROR
+GET {{baseUrl}}/reservas?page=1
+
+### 27 - Consultar reserva de Ana | 200
+GET {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
+
+### 28 - Cancelar y cambiar cantidad juntos | 400 VALIDACION_ERROR
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "estado": "cancelada",
+  "cantidad": 1
+}
+
+### 29 - Cancelar reserva Ana | 200; cancelada
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
   "estado": "cancelada"
 }
 
-### Comprobar que se devolvió 1 lugar
-GET {{baseUrl}}/peliculas/1
+### 30 - Comprobar cupo devuelto | 200; disponibles=1
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
 
-### Cancelar nuevamente sin devolver cupos de más
-PUT {{baseUrl}}/reservas/1
+### 31 - Cancelar por segunda vez | 200; ya cancelada
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
   "estado": "cancelada"
 }
 
-### Comprobar que los cupos siguen iguales
-GET {{baseUrl}}/peliculas/1
+### 32 - Confirmar que sigue habiendo 1 cupo | 200; disponibles=1
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
 
-### Intentar modificar una reserva cancelada
-PUT {{baseUrl}}/reservas/1
+### 33 - Modificar reserva cancelada | 409 RESERVA_NO_ACTIVA
+PUT {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
 
 {
   "cantidad": 2
 }
 
-### Intentar eliminar usuario que tiene reservas
-DELETE {{baseUrl}}/usuarios/1
+### 34 - Ana puede volver a reservar al cancelar | 201; nueva reserva activa
+# @name nuevaReservaAna
+POST {{baseUrl}}/reservas
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
 
-### Intentar eliminar película que tiene reservas
-DELETE {{baseUrl}}/peliculas/1
+{
+  "usuarioId": {{registroAna.response.body.$.id}},
+  "peliculaId": {{crearSala.response.body.$.id}},
+  "cantidad": 1
+}
 
-### Eliminar reserva activa de Bruno
-DELETE {{baseUrl}}/reservas/2
+### 35 - Intento borrar pelicula con reservas | 409 PELICULA_CON_RESERVAS
+DELETE {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
-### Verificar devolución de sus 2 lugares
-GET {{baseUrl}}/peliculas/1
+### 36 - Intento borrar usuario con reservas | 409 USUARIO_CON_RESERVAS
+DELETE {{baseUrl}}/usuarios/{{registroAna.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
-### Eliminar reserva cancelada de Ana
-DELETE {{baseUrl}}/reservas/1
+### 37 - Borrar reserva activa Bruno | 204
+DELETE {{baseUrl}}/reservas/{{reservaBruno.response.body.$.id}}
+Authorization: Bearer {{loginBruno.response.body.$.token}}
 
-### Eliminar usuario Ana sin reservas asociadas
-DELETE {{baseUrl}}/usuarios/1
+### 38 - Borrar segunda reserva activa Ana | 204
+DELETE {{baseUrl}}/reservas/{{nuevaReservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 
-### Consultar reserva eliminada
-GET {{baseUrl}}/reservas/1
+### 39 - Borrar reserva previamente cancelada | 204
+DELETE {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
 
-### Consultar ID inválido
+### 40 - Cupos finales | 200; disponibles=3
+GET {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+
+### 41 - Reserva borrada no existe | 404 RESERVA_NOT_FOUND
+GET {{baseUrl}}/reservas/{{reservaAna.response.body.$.id}}
+
+### 42 - ID reserva invalido | 400 VALIDACION_ERROR
 GET {{baseUrl}}/reservas/abc
+
+### 43 - Eliminar sala sin reservas | 204
+DELETE {{baseUrl}}/peliculas/{{crearSala.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 44 - Eliminar Ana | 204
+DELETE {{baseUrl}}/usuarios/{{registroAna.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 45 - Eliminar Bruno | 204
+DELETE {{baseUrl}}/usuarios/{{registroBruno.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}

@@ -8,7 +8,7 @@ import {
   JWT_SECRET,
   JWT_EXPIRES_IN,
   ADMIN_EMAIL,
-  ADMIN_PASSWORD
+  ADMIN_PASSWORD,
 } from "../config/config.js";
 
 import { sequelize } from "../dao/models/index.js";
@@ -55,6 +55,9 @@ import loginUsuario from "../usecases/auth/loginUsuario.js";
 //Admin inicial
 import seedAdmin from "../usecases/auth/seedAdmin.js";
 
+//Middleware para verificar identidad y permisos
+import createAuthMiddlewares from "../middlewares/auth.js";
+
 // Construye las dependencias y devuelve el Router principal.
 async function buildContainer() {
   // Inicializa SQLite si corresponde.
@@ -71,6 +74,9 @@ async function buildContainer() {
     secret: JWT_SECRET,
     expiresIn: JWT_EXPIRES_IN,
   });
+
+  // Middlewares para el JWT.
+  const auth = createAuthMiddlewares(tokens);
 
   // Crea el bus de eventos y registra su listener.
   const events = createEventBus();
@@ -127,8 +133,8 @@ async function buildContainer() {
   const router = Router();
 
   router.use("/health", healthRoutes);
-  router.use("/peliculas", createPeliculasRoutes(peliculasController));
-  router.use("/usuarios", createUsuariosRoutes(usuariosController));
+  router.use("/peliculas", createPeliculasRoutes(peliculasController, auth));
+  router.use("/usuarios", createUsuariosRoutes(usuariosController, auth));
   router.use("/reservas", createReservasRoutes(reservasController));
   router.use("/auth", createAuthRoutes(authController));
 

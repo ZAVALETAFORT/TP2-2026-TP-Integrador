@@ -12,28 +12,46 @@ import {
 } from "../schemas/usuarioSchemas.js";
 
 // Factory de rutas de usuarios.
-function createUsuariosRoutes(controller) {
+function createUsuariosRoutes(controller, { authenticate, authorize }) {
+
   const router = Router();
+  const adminOnly = [authenticate, authorize("admin")]; //Array de middlewares
 
   // Listar usuarios. Valida parámetros query.
-  router.get("/", validate(usuarioQuerySchema, "query"), controller.list);
+  router.get(
+    "/",
+    adminOnly,
+    validate(usuarioQuerySchema, "query"),
+    controller.list,
+  );
 
   // Consultar usuario por ID.
-  router.get("/:id", validateParams(idUsuarioSchema), controller.get);
+  router.get(
+    "/:id",
+    adminOnly,
+    validateParams(idUsuarioSchema),
+    controller.get,
+  );
 
   // Crear usuario.
-  router.post("/", validate(crearUsuarioSchema), controller.create);
+  router.post("/", adminOnly, validate(crearUsuarioSchema), controller.create);
 
   // Actualizar usuario.
   router.put(
     "/:id",
+    adminOnly,
     validateParams(idUsuarioSchema),
     validate(actualizarUsuarioSchema),
     controller.update,
   );
 
   // Eliminar usuario.
-  router.delete("/:id", validateParams(idUsuarioSchema), controller.remove);
+  router.delete(
+    "/:id",
+    adminOnly,
+    validateParams(idUsuarioSchema),
+    controller.remove,
+  );
 
   return router;
 }

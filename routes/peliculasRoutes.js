@@ -10,7 +10,7 @@ import {
 
 // Factory de rutas de películas.
 // Recibe el Controller desde el Container.
-function createPeliculasRoutes(controller) {
+function createPeliculasRoutes(controller, { authenticate, authorize }) {
   // Creamos un Router de Express.
   const router = Router();
 
@@ -22,22 +22,36 @@ function createPeliculasRoutes(controller) {
   // Busca una película por su ID.
   router.get("/:id", validateParams(idPeliculaSchema), controller.get);
 
-  // POST /peliculas
-  // Crea una película validando el JSON.
-  router.post("/", validate(crearPeliculaSchema), controller.create);
+  // POST /peliculas (SOLO PARA ADMINS)
+  // Crea una película validando el schema.
+  router.post(
+    "/",
+    authenticate,
+    authorize("admin"),
+    validate(crearPeliculaSchema),
+    controller.create,
+  );
 
-  // PUT /peliculas/:id
-  // Actualiza una película.
+  // PUT /peliculas/:id (SOLO PARA ADMINS)
+  // Actualiza una película validando el schema.
   router.put(
     "/:id",
+    authenticate,
+    authorize("admin"),
     validateParams(idPeliculaSchema),
     validate(actualizarPeliculaSchema),
     controller.update,
   );
 
-  // DELETE /peliculas/:id
-  // Elimina una película.
-  router.delete("/:id", validateParams(idPeliculaSchema), controller.remove);
+  // DELETE /peliculas/:id (SOLO PARA ADMINS)
+  // Elimina una película validando el schema.
+  router.delete(
+    "/:id",
+    authenticate,
+    authorize("admin"),
+    validateParams(idPeliculaSchema),
+    controller.remove,
+  );
 
   // Entregamos el Router configurado.
   return router;

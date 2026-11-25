@@ -1,208 +1,195 @@
-# TP2 - Registro y login JWT
-# Usar con VS Code REST Client. Ejecutar las solicitudes EN ORDEN.
-# Iniciar la API con una base vacía:
-#   PERSISTENCE_TYPE=memory MOCK_ENABLED=false npm start
-# o:
-#   PERSISTENCE_TYPE=sequelize SQLITE_STORAGE=:memory: MOCK_ENABLED=false npm start
-# No reiniciar el servidor Memory entre las pruebas.
-# El token NO protege endpoints todavía: esa es la siguiente fase.
+# Registro, login JWT y permisos - ejecutar en orden.
+# Usar una base de pruebas temporal.
 
 @baseUrl = http://localhost:8080
+@adminEmail = admin@ort.com
 
-### 01 - Registrar a Pedro | ESPERADO: 201; sin passwordHash
-# @name registroPedro
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Pedro",
-  "email": "pedro.auth.tp2@example.com",
-  "password": "MiClave123!"
-}
-
-### 02 - Obtener al usuario registrado | ESPERADO: 200; sin passwordHash
-GET {{baseUrl}}/usuarios/{{registroPedro.response.body.$.id}}
-
-### 03 - Listar usuarios | ESPERADO: 200
+### 01 - Autenticacion requerida sin token | 401 TOKEN_MISSING
 GET {{baseUrl}}/usuarios
 
-### 04 - Registrar el mismo email | ESPERADO: 409 EMAIL_DUPLICATED
+### 02 - Registro publico valido | 201; cliente sin passwordHash
+# @name registroCliente
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "nombre": "Pedro Duplicado",
-  "email": "pedro.auth.tp2@example.com",
-  "password": "OtraClave123!"
+  "nombre": "Cliente Auth",
+  "email": "auth.{{$guid}}@example.com",
+  "password": "ClienteDemo123!"
 }
 
-### 05 - Email duplicado con mayúsculas y espacios | ESPERADO: 409 EMAIL_DUPLICATED
-POST {{baseUrl}}/auth/register
+### 03 - Login correcto del cliente | 200; token y rol cliente
+# @name loginCliente
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "nombre": "Otro Pedro",
-  "email": "  PEDRO.AUTH.TP2@EXAMPLE.COM  ",
-  "password": "OtraClave123!"
+  "email": "{{registroCliente.response.body.$.email}}",
+  "password": "ClienteDemo123!"
 }
 
-### 06 - Contraseña corta | ESPERADO: 400 VALIDACION_ERROR
+### 04 - Cliente intenta leer usuarios | 403 FORBIDDEN
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginCliente.response.body.$.token}}
+
+### 05 - Cliente intenta crear pelicula | 403 FORBIDDEN
+POST {{baseUrl}}/peliculas
+Authorization: Bearer {{loginCliente.response.body.$.token}}
+Content-Type: application/json
+
+{}
+
+### 06 - Iniciar sesion administrador | 200; token y rol admin
+# @name loginAdmin
+# @prompt password Clave de administrador de .env
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
+}
+
+### 07 - Admin puede listar usuarios | 200; sin hash
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 08 - Admin puede consultar cliente | 200; rol cliente
+GET {{baseUrl}}/usuarios/{{registroCliente.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 09 - Repetir email registrado | 409 EMAIL_DUPLICATED
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "nombre": "Juan",
-  "email": "juan.auth.tp2@example.com",
+  "nombre": "Duplicado",
+  "email": "{{registroCliente.response.body.$.email}}",
+  "password": "ClienteDemo123!"
+}
+
+### 10 - Contrasena corta | 400 VALIDACION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Corto",
+  "email": "corto.{{$guid}}@example.com",
   "password": "123"
 }
 
-### 07 - Email inválido | ESPERADO: 400 VALIDACION_ERROR
+### 11 - Email invalido | 400 VALIDACION_ERROR
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "nombre": "Juan",
-  "email": "correo-invalido",
-  "password": "MiClave123!"
+  "nombre": "Invalido",
+  "email": "no-es-un-email",
+  "password": "ClaveDemo123!"
 }
 
-### 08 - Nombre demasiado corto | ESPERADO: 400 VALIDACION_ERROR
+### 12 - Nombre demasiado corto | 400 VALIDACION_ERROR
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
   "nombre": "J",
-  "email": "j.auth.tp2@example.com",
-  "password": "MiClave123!"
+  "email": "nombre.{{$guid}}@example.com",
+  "password": "ClaveDemo123!"
 }
 
-### 09 - Intentar autoasignar rol admin | ESPERADO: 400 VALIDACION_ERROR
+### 13 - Registro sin password | 400 VALIDACION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Sin Password",
+  "email": "sinpassword.{{$guid}}@example.com"
+}
+
+### 14 - Intentar autoasignarse rol admin | 400 VALIDACION_ERROR
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
   "nombre": "Admin Falso",
-  "email": "adminfalso.auth.tp2@example.com",
-  "password": "MiClave123!",
+  "email": "fakeadmin.{{$guid}}@example.com",
+  "password": "ClaveDemo123!",
   "rol": "admin"
 }
 
-### 10 - Registro sin password | ESPERADO: 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "María",
-  "email": "maria.auth.tp2@example.com"
-}
-
-### 11 - Login válido | ESPERADO: 200; token y user sin passwordHash
-# @name loginPedro
+### 15 - Login con password incorrecta | 401 INVALID_CREDENTIALS
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "pedro.auth.tp2@example.com",
-  "password": "MiClave123!"
+  "email": "{{registroCliente.response.body.$.email}}",
+  "password": "Incorrecta123!"
 }
 
-### 12 - Login con email en mayúsculas | ESPERADO: 200
+### 16 - Login con usuario inexistente | 401 INVALID_CREDENTIALS
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "PEDRO.AUTH.TP2@EXAMPLE.COM",
-  "password": "MiClave123!"
+  "email": "noexiste.{{$guid}}@example.com",
+  "password": "ClienteDemo123!"
 }
 
-### 13 - Login con contraseña incorrecta | ESPERADO: 401 INVALID_CREDENTIALS
+### 17 - Login sin password | 400 VALIDACION_ERROR
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "pedro.auth.tp2@example.com",
-  "password": "incorrecta"
+  "email": "{{registroCliente.response.body.$.email}}"
 }
 
-### 14 - Login con email inexistente | ESPERADO: 401 INVALID_CREDENTIALS
+### 18 - Login con JSON corrupto | 400 INVALID_JSON
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
-{
-  "email": "noexiste.auth.tp2@example.com",
-  "password": "MiClave123!"
-}
+{"email":"demo@example.com", "password":
 
-### 15 - Login sin contraseña | ESPERADO: 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/login
+### 19 - Login por GET (ruta inexistente) | 404 ROUTE_NOT_FOUND
+GET {{baseUrl}}/auth/login
+
+### 20 - Token invalido | 401 TOKEN_INVALID
+GET {{baseUrl}}/usuarios
+Authorization: Bearer abc.def.ghi
+
+### 21 - Token omitido | 401 TOKEN_MISSING
+POST {{baseUrl}}/peliculas
 Content-Type: application/json
 
-{
-  "email": "pedro.auth.tp2@example.com"
-}
+{}
 
-### 16 - Login con email inválido | ESPERADO: 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
+### 22 - Control de lectura publica | 200
+GET {{baseUrl}}/peliculas
 
-{
-  "email": "no-es-email",
-  "password": "MiClave123!"
-}
-
-### 17 - Login con JSON malformado | ESPERADO: 400 INVALID_JSON
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{"email":"pedro.auth.tp2@example.com", "password":
-
-### 18 - Acceder a un usuario inexistente | ESPERADO: 404 USUARIO_NOT_FOUND
-GET {{baseUrl}}/usuarios/999999
-
-### 19 - Verificar que /auth/register no acepta GET | ESPERADO: 404 ROUTE_NOT_FOUND
-GET {{baseUrl}}/auth/register
-
-### 20 - Registrar otro usuario para comprobar IDs distintos | ESPERADO: 201
-# @name registroAna
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Ana",
-  "email": "ana.auth.tp2@example.com",
-  "password": "OtraClave123!"
-}
-
-### 21 - Consultar a Ana | ESPERADO: 200; ID distinto de Pedro
-GET {{baseUrl}}/usuarios/{{registroAna.response.body.$.id}}
-
-### 22 - Login de Ana | ESPERADO: 200; token del nuevo usuario
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "ana.auth.tp2@example.com",
-  "password": "OtraClave123!"
-}
-
-### 23 - Estado del servidor | ESPERADO: 200
-GET {{baseUrl}}/health
-
-### 24 - Usuario creado por CRUD anterior (sin contraseña) | ESPERADO: 201
-# @name usuarioSinClave
+### 23 - Crear usuario viejo CRUD sin password | 201; cliente sin passwordHash
+# @name usuarioSinPassword
 POST {{baseUrl}}/usuarios
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "nombre": "Usuario sin clave",
-  "email": "sinclave.auth.tp2@example.com"
+  "nombre": "Usuario CRUD",
+  "email": "crud.{{$guid}}@example.com"
 }
 
-### 25 - Usuario del CRUD anterior no puede hacer login | ESPERADO: 401 INVALID_CREDENTIALS
+### 24 - Usuario CRUD no puede hacer login | 401 INVALID_CREDENTIALS
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "sinclave.auth.tp2@example.com",
-  "password": "MiClave123!"
+  "email": "{{usuarioSinPassword.response.body.$.email}}",
+  "password": "NoExiste123!"
 }
+
+### 25 - Eliminar cuenta CRUD de demostracion | 204
+DELETE {{baseUrl}}/usuarios/{{usuarioSinPassword.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 26 - Eliminar cuenta Auth de demostracion | 204
+DELETE {{baseUrl}}/usuarios/{{registroCliente.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
