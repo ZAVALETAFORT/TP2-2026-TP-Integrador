@@ -1,7 +1,7 @@
 # TP2 — API REST de Reservas de Cine
 
-**Trabajo Práctico Integrador — Taller de Programación 2**  
-**Grupo 3:** Moises Zavaleta  
+**Trabajo Práctico Integrador — Taller de Programación 2**
+**Grupo 3:** Moises Zavaleta
 **Repositorio:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
 
 ## 1. Descripción
@@ -189,7 +189,7 @@ Para desarrollo con reinicio automático:
 npm run dev
 ```
 
-No es obligatorio crear un archivo `.env` si las variables necesarias se proporcionan desde el entorno. `JWT_SECRET` siempre es obligatorio.
+Usamos el .env, `JWT_SECRET` siempre es obligatorio.
 
 Por defecto, el sistema utiliza SQLite y el puerto `8080`.
 
@@ -201,21 +201,22 @@ No se requiere instalar SQLite por separado ni ejecutar comandos SQL manuales.
 
 Variables documentadas en `.env.example`:
 
-| Variable | Valor predeterminado | Descripción |
-| --- | --- | --- |
-| `PORT` | `8080` | Puerto HTTP de la aplicación. |
-| `NODE_ENV` | `development` | Entorno de ejecución: `development`, `production` o `test`. |
-| `PERSISTENCE_TYPE` | `sequelize` | Adaptador: `memory` (arrays) o `sequelize` (SQLite). |
-| `SQLITE_STORAGE` | `data/cine.sqlite` | Archivo SQLite; `:memory:` para una base temporal en RAM. |
-| `DOCS_ENABLED` | `true` en desarrollo | Habilita Swagger UI (`/api-docs`) y OpenAPI (`/openapi.json`). |
-| `MOCK_ENABLED` | `true` en desarrollo | Activa la precarga automática de datos de prueba. |
-| `BCRYPT_ROUNDS` | `5` en config | Costo de bcrypt; `.env.example` propone `10`. |
-| `JWT_SECRET` | Obligatorio | Clave utilizada para firmar y verificar tokens JWT. |
-| `JWT_EXPIRES_IN` | `1h` | Tiempo de duración de los tokens. |
-| `ADMIN_EMAIL` | Vacío | Email del administrador inicial; opcional. |
-| `ADMIN_PASSWORD` | Vacío | Contraseña del administrador inicial, mínimo 8 caracteres; opcional. |
 
-El archivo `.env` es opcional y permite sobrescribir los valores predeterminados. No se versiona en Git.
+| Variable           | Valor predeterminado | Descripción                                                           |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `PORT`             | `8080`               | Puerto HTTP de la aplicación.                                         |
+| `NODE_ENV`         | `development`        | Entorno de ejecución: `development`, `production` o `test`.           |
+| `PERSISTENCE_TYPE` | `sequelize`          | Adaptador: `memory` (arrays) o `sequelize` (SQLite).                   |
+| `SQLITE_STORAGE`   | `data/cine.sqlite`   | Archivo SQLite; `:memory:` para una base temporal en RAM.              |
+| `DOCS_ENABLED`     | `true` en desarrollo | Habilita Swagger UI (`/api-docs`) y OpenAPI (`/openapi.json`).         |
+| `MOCK_ENABLED`     | `true` en desarrollo | Activa la precarga automática de datos de prueba.                     |
+| `BCRYPT_ROUNDS`    | `5` en config        | Costo de bcrypt; `.env.example` propone `10`.                          |
+| `JWT_SECRET`       | Obligatorio          | Clave utilizada para firmar y verificar tokens JWT.                    |
+| `JWT_EXPIRES_IN`   | `1h`                 | Tiempo de duración de los tokens.                                     |
+| `ADMIN_EMAIL`      | Vacío               | Email del administrador inicial; opcional.                             |
+| `ADMIN_PASSWORD`   | Vacío               | Contraseña del administrador inicial, mínimo 8 caracteres; opcional. |
+
+El archivo `.env`  permite sobrescribir los valores predeterminados. No se versiona en Git.
 
 **Documentación:** si `DOCS_ENABLED` no está definido, se habilita automáticamente en `development` y se deshabilita en `production`. Un valor explícito `DOCS_ENABLED=true` o `DOCS_ENABLED=false` tiene prioridad sobre `NODE_ENV`. Si se copia `.env.example` a `.env` (`DOCS_ENABLED=true`), la documentación de OpenAPI y Swagger se habilita aunque sea `production`.
 
@@ -364,7 +365,7 @@ Se integró OpenAPI 3.1 con Swagger UI en:
 - **Swagger UI:** `http://localhost:8080/api-docs/`
 - **Contrato OpenAPI:** `http://localhost:8080/openapi.json`
 
-Documenta las 18 operaciones de Salud, Autenticación, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
+Documenta los heaths, Autenticación, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
 
 Los schemas Zod de entrada se reutilizan para generar la documentación.
 
@@ -404,13 +405,14 @@ Pruebas completadas durante el desarrollo:
 
 Los tests utilizan `node:test`, `assert` y DAO Memory.
 
-| Archivo | Pruebas |
-| --- | ---: |
-| `tests/auth.test.js` | 4 |
-| `tests/peliculas.test.js` | 2 |
-| `tests/usuarios.test.js` | 3 |
-| `tests/reservas.test.js` | 5 |
-| **Total** | **14** |
+
+| Archivo                   | Pruebas |
+| --------------------------- | --------: |
+| `tests/auth.test.js`      |       4 |
+| `tests/peliculas.test.js` |       2 |
+| `tests/usuarios.test.js`  |       3 |
+| `tests/reservas.test.js`  |       5 |
+| **Total**                 |  **14** |
 
 Ejecutar todos desde la raíz:
 
@@ -445,13 +447,3 @@ No deben subirse:
 - Secretos y credenciales
 
 El archivo `.env.example` sí debe versionarse.
-
-## 15. Estado del proyecto
-
-**Implementación principal completada. Pendiente de QA final y preparación de entrega.**
-
-Completados: modelos y relaciones, CRUD de Películas, Usuarios y Reservas, persistencia Memory/Sequelize, DAO Factory, Container, eventos, registro, login, bcrypt, JWT, roles, titularidad de reservas, Swagger/OpenAPI con autenticación y tests automatizados.
-
-Pendientes: instalación limpia, verificación final en ambas persistencias, pruebas de concurrencia y validación completa desde Swagger UI.
-
-La rama de trabajo es `develop`. Se realizan integraciones incrementales a `main` después de validar cada fase.

@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import AppError from "../errors/AppError.js";
 
 // Factory del servicio de tokens.
-function createTokenService({ secret, expiresIn }) {
+function createTokenService({ secret, expiresIn }) { // Recibe la clave secreta y el tiempo de expiración del token.
   return {
     // Genera un token firmado.
     sign: (payload) => jwt.sign(payload, secret, { expiresIn }),

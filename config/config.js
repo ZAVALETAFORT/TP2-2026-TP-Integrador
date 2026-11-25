@@ -36,7 +36,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) { 
   throw new Error("JWT_SECRET es requerido");
 }
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h"; //expiracion JWT
+//Le paso la expiracion del token por variable de entorno, si no esta definida, por defecto es 1 hora.
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h"; 
 
 //Creacion de admin
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
