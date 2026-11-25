@@ -22,7 +22,7 @@ Content-Type: application/json
 
 {
   "nombre": "Cliente Demo",
-  "email": "demo.{{$guid}}@example.com",
+  "email": "demo.memory@example.com",
   "password": "Cliente123"
 }
 
