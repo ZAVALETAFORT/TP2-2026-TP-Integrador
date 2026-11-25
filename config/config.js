@@ -31,6 +31,17 @@ const MOCK_ENABLED =
 // Costo del hash bcrypt
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 5;
 
+//Uso de JWT
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) { 
+  throw new Error("JWT_SECRET es requerido");
+}
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h"; //expiracion JWT
+
+//Creacion de admin
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
 export {
   PORT,
   NODE_ENV,
@@ -38,5 +49,9 @@ export {
   SQLITE_STORAGE,
   DOCS_ENABLED,
   MOCK_ENABLED,
-  BCRYPT_ROUNDS
+  BCRYPT_ROUNDS,
+  JWT_SECRET,
+  JWT_EXPIRES_IN,
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD
 };

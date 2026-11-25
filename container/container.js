@@ -1,16 +1,24 @@
 import { Router } from "express";
 import healthRoutes from "../routes/healthRoutes.js";
+
 import {
   PERSISTENCE_TYPE,
   DOCS_ENABLED,
   MOCK_ENABLED,
+  JWT_SECRET,
+  JWT_EXPIRES_IN,
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD
 } from "../config/config.js";
+
 import { sequelize } from "../dao/models/index.js";
+
 import {
   getPeliculasDao,
   getUsuariosDao,
   getReservasDao,
 } from "../dao/daoFactory.js";
+
 import seedMockData from "../data/mock.js";
 
 import makePeliculaUseCases from "../usecases/peliculas/makePeliculaUseCases.js";
@@ -40,6 +48,13 @@ import createPasswordHasher from "../security/passwordHasher.js";
 import AuthController from "../controllers/AuthController.js";
 import createAuthRoutes from "../routes/authRoutes.js";
 
+//Servicio de tokens JWT
+import createTokenService from "../security/tokenService.js";
+import loginUsuario from "../usecases/auth/loginUsuario.js";
+
+//Admin inicial
+import seedAdmin from "../usecases/auth/seedAdmin.js";
+
 // Construye las dependencias y devuelve el Router principal.
 async function buildContainer() {
   // Inicializa SQLite si corresponde.
@@ -48,8 +63,14 @@ async function buildContainer() {
     console.log("[SQLite] Base de datos inicializada");
   }
 
-  // Hasher al crear usuarios
+  // Construye el Hasher al crear usuarios
   const hasher = createPasswordHasher({ rounds: BCRYPT_ROUNDS });
+
+  // Construye el servicio de tokens JWT
+  const tokens = createTokenService({
+    secret: JWT_SECRET,
+    expiresIn: JWT_EXPIRES_IN,
+  });
 
   // Crea el bus de eventos y registra su listener.
   const events = createEventBus();
@@ -74,7 +95,7 @@ async function buildContainer() {
     events,
   });
 
-  //Mock de precarga
+  //Pregarca de Mock de datos
   if (MOCK_ENABLED) {
     await seedMockData({
       usuariosUseCases,
@@ -83,11 +104,24 @@ async function buildContainer() {
     });
   }
 
+  //Precarga de Admin inicial
+  await seedAdmin(
+    {
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+    },
+    usuariosDao,
+    hasher,
+  );
+
   // Construye los Controllers con los casos de uso.
   const peliculasController = new PeliculasController(peliculasUseCases);
   const usuariosController = new UsuariosController(usuariosUseCases);
   const reservasController = new ReservasController(reservasUseCases);
-  const authController = new AuthController({ register: usuariosUseCases.createUsuario });
+  const authController = new AuthController({
+    register: usuariosUseCases.createUsuario,
+    login: (data) => loginUsuario(data, usuariosDao, hasher, tokens),
+  });
 
   // Registra los endpoints existentes.
   const router = Router();

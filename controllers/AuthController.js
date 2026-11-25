@@ -13,6 +13,13 @@ class AuthController {
 
     res.status(201).json(publicUser);
   };
+
+  // POST /auth/login
+  login = async (req, res) => {
+    const resultado = await this.#useCases.login(req.body);
+
+    res.json(resultado);
+  };
 }
 
 export default AuthController;
