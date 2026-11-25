@@ -1,194 +1,41 @@
-# Usuarios: CRUD, validaciones y roles - ejecutar en orden.
-# Usar una base de pruebas temporal.
-
+# CRUD de usuarios. Solo administrador.
 @baseUrl = http://localhost:8080
-@adminEmail = admin@ort.com
 
-### 01 - Iniciar sesion administrador | 200; token y rol admin
-# @name loginAdmin
-# @prompt password Clave de administrador de .env
+### 01 - Login administrador | 200
+# @name admin
+# @prompt password Clave del administrador
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{adminEmail}}",
+  "email": "admin@ort.com",
   "password": "{{password}}"
 }
 
-### 02 - Listado como admin | 200; hashes nunca visibles
-GET {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 03 - Crear usuario Ana via CRUD | 201; rol cliente
-# @name crearAna
+### 02 - Crear usuario | 201
+# @name usuario
 POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Authorization: Bearer {{admin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "nombre": "Ana Garcia",
-  "email": "ANA.{{$guid}}@example.com"
+  "nombre": "Juan Perez",
+  "email": "juan.{{$guid}}@example.com"
 }
 
-### 04 - Consultar Ana por ID | 200
-GET {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+### 03 - Consultar usuario | 200
+GET {{baseUrl}}/usuarios/{{usuario.response.body.$.id}}
+Authorization: Bearer {{admin.response.body.$.token}}
 
-### 05 - Crear usuario Bruno | 201
-# @name crearBruno
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+### 04 - Modificar usuario | 200
+PUT {{baseUrl}}/usuarios/{{usuario.response.body.$.id}}
+Authorization: Bearer {{admin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "nombre": "Bruno Lopez",
-  "email": "bruno.{{$guid}}@example.com"
+  "nombre": "Juan Actualizado"
 }
 
-### 06 - Email duplicado | 409 EMAIL_DUPLICATED
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "Duplicada",
-  "email": "{{crearAna.response.body.$.email}}"
-}
-
-### 07 - Actualizar nombre Ana | 200
-PUT {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "Ana Garcia Actualizada"
-}
-
-### 08 - Actualizar email Ana | 200
-PUT {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "email": "ana.final.{{$guid}}@example.com"
-}
-
-### 09 - No se puede usar email de Bruno | 409 EMAIL_DUPLICATED
-PUT {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "email": "{{crearBruno.response.body.$.email}}"
-}
-
-### 10 - Creacion con nombre y mail invalidos | 400 VALIDACION_ERROR
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "",
-  "email": "no-es-email"
-}
-
-### 11 - No se puede enviar rol admin | 400 VALIDACION_ERROR
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "Admin Falso",
-  "email": "adminfalso.{{$guid}}@example.com",
-  "rol": "admin"
-}
-
-### 12 - No se puede actualizar rol | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "rol": "admin"
-}
-
-### 13 - PUT vacio no permitido | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{}
-
-### 14 - Query page no permitido | 400 VALIDACION_ERROR
-GET {{baseUrl}}/usuarios?page=1
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 15 - ID no numerico | 400 VALIDACION_ERROR
-GET {{baseUrl}}/usuarios/abc
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 16 - Usuario no existente | 404 USUARIO_NOT_FOUND
-GET {{baseUrl}}/usuarios/999999
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 17 - Consulta sin JWT | 401 TOKEN_MISSING
-GET {{baseUrl}}/usuarios
-
-### 18 - Consulta JWT falso | 401 TOKEN_INVALID
-GET {{baseUrl}}/usuarios
-Authorization: Bearer falso
-
-### 19 - Registrar cliente para verificacion de rol | 201; rol cliente
-# @name registrarCliente
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Cliente Solo Lectura",
-  "email": "cliente.usuarios.{{$guid}}@example.com",
-  "password": "ClienteDemo123!"
-}
-
-### 20 - Login cliente | 200
-# @name loginCliente
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{registrarCliente.response.body.$.email}}",
-  "password": "ClienteDemo123!"
-}
-
-### 21 - Cliente no puede listar usuarios | 403 FORBIDDEN
-GET {{baseUrl}}/usuarios
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-
-### 22 - Cliente no puede crear usuarios | 403 FORBIDDEN
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "Intruso",
-  "email": "intruso.{{$guid}}@example.com"
-}
-
-### 23 - Cliente no puede borrar usuarios | 403 FORBIDDEN
-DELETE {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-
-### 24 - Admin elimina Bruno | 204
-DELETE {{baseUrl}}/usuarios/{{crearBruno.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 25 - Bruno ya no existe | 404 USUARIO_NOT_FOUND
-GET {{baseUrl}}/usuarios/{{crearBruno.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 26 - Admin elimina Ana | 204
-DELETE {{baseUrl}}/usuarios/{{crearAna.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 27 - Admin elimina cliente de prueba | 204
-DELETE {{baseUrl}}/usuarios/{{registrarCliente.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+### 05 - Eliminar usuario | 204
+DELETE {{baseUrl}}/usuarios/{{usuario.response.body.$.id}}
+Authorization: Bearer {{admin.response.body.$.token}}

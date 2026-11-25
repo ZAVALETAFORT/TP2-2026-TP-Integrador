@@ -1,195 +1,34 @@
-# Registro, login JWT y permisos - ejecutar en orden.
-# Usar una base de pruebas temporal.
-
+# Autenticacion y permisos.
 @baseUrl = http://localhost:8080
-@adminEmail = admin@ort.com
 
-### 01 - Autenticacion requerida sin token | 401 TOKEN_MISSING
-GET {{baseUrl}}/usuarios
 
-### 02 - Registro publico valido | 201; cliente sin passwordHash
-# @name registroCliente
+### 01 - Registrar cliente | 201
+# @name registro
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
   "nombre": "Cliente Auth",
   "email": "auth.{{$guid}}@example.com",
-  "password": "ClienteDemo123!"
+  "password": "Cliente123"
 }
 
-### 03 - Login correcto del cliente | 200; token y rol cliente
-# @name loginCliente
+
+### 02 - Login y obtener JWT | 200
+# @name login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{registroCliente.response.body.$.email}}",
-  "password": "ClienteDemo123!"
+  "email": "{{registro.response.body.$.email}}",
+  "password": "Cliente123"
 }
 
-### 04 - Cliente intenta leer usuarios | 403 FORBIDDEN
+
+### 03 - Acceso sin token | 401
 GET {{baseUrl}}/usuarios
-Authorization: Bearer {{loginCliente.response.body.$.token}}
 
-### 05 - Cliente intenta crear pelicula | 403 FORBIDDEN
-POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
 
-{}
-
-### 06 - Iniciar sesion administrador | 200; token y rol admin
-# @name loginAdmin
-# @prompt password Clave de administrador de .env
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{adminEmail}}",
-  "password": "{{password}}"
-}
-
-### 07 - Admin puede listar usuarios | 200; sin hash
+### 04 - Cliente sin permiso de administrador | 403
 GET {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 08 - Admin puede consultar cliente | 200; rol cliente
-GET {{baseUrl}}/usuarios/{{registroCliente.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 09 - Repetir email registrado | 409 EMAIL_DUPLICATED
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Duplicado",
-  "email": "{{registroCliente.response.body.$.email}}",
-  "password": "ClienteDemo123!"
-}
-
-### 10 - Contrasena corta | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Corto",
-  "email": "corto.{{$guid}}@example.com",
-  "password": "123"
-}
-
-### 11 - Email invalido | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Invalido",
-  "email": "no-es-un-email",
-  "password": "ClaveDemo123!"
-}
-
-### 12 - Nombre demasiado corto | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "J",
-  "email": "nombre.{{$guid}}@example.com",
-  "password": "ClaveDemo123!"
-}
-
-### 13 - Registro sin password | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Sin Password",
-  "email": "sinpassword.{{$guid}}@example.com"
-}
-
-### 14 - Intentar autoasignarse rol admin | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Admin Falso",
-  "email": "fakeadmin.{{$guid}}@example.com",
-  "password": "ClaveDemo123!",
-  "rol": "admin"
-}
-
-### 15 - Login con password incorrecta | 401 INVALID_CREDENTIALS
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{registroCliente.response.body.$.email}}",
-  "password": "Incorrecta123!"
-}
-
-### 16 - Login con usuario inexistente | 401 INVALID_CREDENTIALS
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "noexiste.{{$guid}}@example.com",
-  "password": "ClienteDemo123!"
-}
-
-### 17 - Login sin password | 400 VALIDACION_ERROR
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{registroCliente.response.body.$.email}}"
-}
-
-### 18 - Login con JSON corrupto | 400 INVALID_JSON
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{"email":"demo@example.com", "password":
-
-### 19 - Login por GET (ruta inexistente) | 404 ROUTE_NOT_FOUND
-GET {{baseUrl}}/auth/login
-
-### 20 - Token invalido | 401 TOKEN_INVALID
-GET {{baseUrl}}/usuarios
-Authorization: Bearer abc.def.ghi
-
-### 21 - Token omitido | 401 TOKEN_MISSING
-POST {{baseUrl}}/peliculas
-Content-Type: application/json
-
-{}
-
-### 22 - Control de lectura publica | 200
-GET {{baseUrl}}/peliculas
-
-### 23 - Crear usuario viejo CRUD sin password | 201; cliente sin passwordHash
-# @name usuarioSinPassword
-POST {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "nombre": "Usuario CRUD",
-  "email": "crud.{{$guid}}@example.com"
-}
-
-### 24 - Usuario CRUD no puede hacer login | 401 INVALID_CREDENTIALS
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{usuarioSinPassword.response.body.$.email}}",
-  "password": "NoExiste123!"
-}
-
-### 25 - Eliminar cuenta CRUD de demostracion | 204
-DELETE {{baseUrl}}/usuarios/{{usuarioSinPassword.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 26 - Eliminar cuenta Auth de demostracion | 204
-DELETE {{baseUrl}}/usuarios/{{registroCliente.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Authorization: Bearer {{login.response.body.$.token}}

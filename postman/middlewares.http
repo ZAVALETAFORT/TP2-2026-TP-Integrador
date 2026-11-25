@@ -1,63 +1,19 @@
-# Infraestructura: health, Swagger y errores - ejecutar en orden.
-# Swagger requiere DOCS_ENABLED=true; las cifras del mock solo aplican con MOCK_ENABLED=true.
-
+# Pruebas basicas de middlewares y documentacion.
+# Requiere DOCS_ENABLED=true.
 @baseUrl = http://localhost:8080
-@adminEmail = admin@ort.com
 
-### 01 - Health endpoint | 200
+
+### 01 - Servidor funcionando | 200
 GET {{baseUrl}}/health
 
-### 02 - Swagger UI | 200 HTML (DOCS_ENABLED=true)
+
+### 02 - Swagger disponible | 200
 GET {{baseUrl}}/api-docs/
 
-### 03 - OpenAPI JSON | 200 JSON openapi=3.1.0
+
+### 03 - Contrato OpenAPI | 200
 GET {{baseUrl}}/openapi.json
 
-### 04 - Cartelera publica | 200 array
-GET {{baseUrl}}/peliculas
 
-### 05 - Reservas actuales | 200 array
+### 04 - Ruta protegida sin JWT | 401
 GET {{baseUrl}}/reservas
-
-### 06 - Filtro reservas activas | 200 array
-GET {{baseUrl}}/reservas?estado=activa
-
-### 07 - Filtro reservas canceladas | 200 array
-GET {{baseUrl}}/reservas?estado=cancelada
-
-### 08 - Rutas desconocidas | 404 ROUTE_NOT_FOUND
-GET {{baseUrl}}/no-existe
-
-### 09 - Parametro ID invalido | 400 VALIDACION_ERROR
-GET {{baseUrl}}/peliculas/xyz
-
-### 10 - Recurso inexistente | 404 PELICULA_NOT_FOUND
-GET {{baseUrl}}/peliculas/999999
-
-### 11 - JSON incorrecto | 400 INVALID_JSON
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{"nombre":
-
-### 12 - Acceso restringido sin token | 401 TOKEN_MISSING
-GET {{baseUrl}}/usuarios
-
-### 13 - Iniciar sesion administrador | 200; token y rol admin
-# @name loginAdmin
-# @prompt password Clave de administrador de .env
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{adminEmail}}",
-  "password": "{{password}}"
-}
-
-### 14 - Admin consulta usuarios y mock | 200 array sin passwordHash
-GET {{baseUrl}}/usuarios
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 15 - JWT falso | 401 TOKEN_INVALID
-GET {{baseUrl}}/usuarios
-Authorization: Bearer token_falso

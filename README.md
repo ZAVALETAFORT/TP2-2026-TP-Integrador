@@ -1,7 +1,7 @@
 # TP2 — API REST de Reservas de Cine
 
-**Trabajo Práctico Integrador — Taller de Programación 2**
-**Grupo 3:** Moises Zavaleta
+**Trabajo Práctico Integrador — Taller de Programación 2**  
+**Grupo 3:** Moises Zavaleta  
 **Repositorio:** https://github.com/ZAVALETAFORT/TP2-2026-TP-Integrador
 
 ## 1. Descripción
@@ -15,6 +15,8 @@ Tecnologías:
 - Zod para validaciones.
 - Sequelize con SQLite.
 - Persistencia alternativa mediante arrays JavaScript.
+- bcrypt para contraseñas y JWT para autenticación.
+- Node.js Test Runner para tests automatizados.
 
 La aplicación utiliza una arquitectura en capas:
 
@@ -90,10 +92,9 @@ Implementadas:
 - Se devuelven cupos una sola vez al cancelar.
 - Se ajustan los cupos al cambiar la cantidad de la reserva.
 - Se impide eliminar usuarios o películas con reservas asociadas.
-
-Pendiente:
-
-- Aplicar permisos según el usuario autenticado.
+- Los clientes solo pueden consultar y modificar sus propias reservas.
+- Los administradores pueden gestionar todas las reservas.
+- Solo los administradores pueden administrar usuarios y películas.
 
 Las reglas de negocio deben permanecer en los Use Cases.
 
@@ -110,13 +111,15 @@ controllers/          Entrada y salida HTTP
 routes/               Endpoints y Swagger UI
 usecases/             Reglas de negocio
 schemas/              Validación Zod
-middlewares/          Validaciones y errores
+middlewares/          Validaciones, autenticación y errores
 errors/               AppError
 events/               Bus y nombres de eventos
 alerts/               Listeners
-notifications/         Notificador por consola
-docs/                  Contrato OpenAPI 3.1
-postman/               Pruebas HTTP
+notifications/        Notificador por consola
+security/             Contraseñas y JWT
+docs/                 Contrato OpenAPI 3.1
+postman/              Pruebas HTTP
+tests/                Tests automatizados
 ```
 
 ### DAO Factory
@@ -136,7 +139,8 @@ El Container:
 2. Selecciona los DAO mediante la Factory.
 3. Inyecta los DAO en las factories de casos de uso.
 4. Inyecta los casos de uso en los Controllers.
-5. Construye y devuelve el Router principal.
+5. Construye los servicios de autenticación, JWT y eventos.
+6. Monta y devuelve el Router principal.
 
 Los Controllers no importan los DAO concretos.
 
@@ -161,6 +165,18 @@ cd TP2-2026-TP-Integrador
 npm ci
 ```
 
+### Configurar el entorno
+
+```bash
+cp .env.example .env
+```
+
+Editar `.env` y configurar obligatoriamente `JWT_SECRET` con una clave secreta.
+
+Opcionalmente, configurar `ADMIN_EMAIL` y `ADMIN_PASSWORD` para crear el administrador inicial.
+
+El archivo `.env` no se versiona.
+
 ### Iniciar la API
 
 ```bash
@@ -173,7 +189,7 @@ Para desarrollo con reinicio automático:
 npm run dev
 ```
 
-No es obligatorio crear un archivo `.env`.
+No es obligatorio crear un archivo `.env` si las variables necesarias se proporcionan desde el entorno. `JWT_SECRET` siempre es obligatorio.
 
 Por defecto, el sistema utiliza SQLite y el puerto `8080`.
 
@@ -185,14 +201,19 @@ No se requiere instalar SQLite por separado ni ejecutar comandos SQL manuales.
 
 Variables documentadas en `.env.example`:
 
-| Variable           | Valor predeterminado                        | Descripción                                                                                    |
-| ------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `PORT`             | `8080`                                      | Puerto HTTP de la aplicación (8080 en el config default)                                       |
-| `NODE_ENV`         | `development`                               | Entorno de ejecución: `development`, `production` o `test`.                                    |
-| `PERSISTENCE_TYPE` | `sequelize`                                 | Adaptador de persistencia: `memory` (arrays) o `sequelize` (SQLite).                           |
-| `SQLITE_STORAGE`   | `data/cine.sqlite`                          | Ruta del archivo SQLite cuando se utiliza Sequelize; `:memory:` para una base temporal en RAM. |
-| `DOCS_ENABLED`     | `true` en desarrollo; `false` en producción | Habilita o deshabilita Swagger UI (`/api-docs`) y el contrato (`/openapi.json`).               |
-| `MOCK_ENABLED`     | `true` en desarrollo; `false` en producción | Activa la precarga automática de datos de prueba (`/data/mock.js`)                             |
+| Variable | Valor predeterminado | Descripción |
+| --- | --- | --- |
+| `PORT` | `8080` | Puerto HTTP de la aplicación. |
+| `NODE_ENV` | `development` | Entorno de ejecución: `development`, `production` o `test`. |
+| `PERSISTENCE_TYPE` | `sequelize` | Adaptador: `memory` (arrays) o `sequelize` (SQLite). |
+| `SQLITE_STORAGE` | `data/cine.sqlite` | Archivo SQLite; `:memory:` para una base temporal en RAM. |
+| `DOCS_ENABLED` | `true` en desarrollo | Habilita Swagger UI (`/api-docs`) y OpenAPI (`/openapi.json`). |
+| `MOCK_ENABLED` | `true` en desarrollo | Activa la precarga automática de datos de prueba. |
+| `BCRYPT_ROUNDS` | `5` en config | Costo de bcrypt; `.env.example` propone `10`. |
+| `JWT_SECRET` | Obligatorio | Clave utilizada para firmar y verificar tokens JWT. |
+| `JWT_EXPIRES_IN` | `1h` | Tiempo de duración de los tokens. |
+| `ADMIN_EMAIL` | Vacío | Email del administrador inicial; opcional. |
+| `ADMIN_PASSWORD` | Vacío | Contraseña del administrador inicial, mínimo 8 caracteres; opcional. |
 
 El archivo `.env` es opcional y permite sobrescribir los valores predeterminados. No se versiona en Git.
 
@@ -237,6 +258,11 @@ La configuración se aplica al iniciar el servidor. Con la documentación deshab
 
 - `GET /health`
 
+### Autenticación
+
+- `POST /auth/register`
+- `POST /auth/login`
+
 ### Películas
 
 - `GET /peliculas`
@@ -261,7 +287,11 @@ La configuración se aplica al iniciar el servidor. Con la documentación deshab
 - `PUT /reservas/:id`
 - `DELETE /reservas/:id`
 
-Las rutas permiten probar los CRUD y sus validaciones. La autorización por roles se incorporará en una fase posterior. La especificación completa de los endpoints está en `/api-docs`.
+Las rutas permiten probar los CRUD y sus validaciones.
+
+Los usuarios requieren rol `admin`. Las consultas de películas son públicas, mientras que su creación, modificación y eliminación requieren rol `admin`. Las reservas requieren JWT y verifican la titularidad del usuario.
+
+La especificación completa de los endpoints está en `/api-docs`.
 
 ## 8. Validaciones y errores
 
@@ -278,7 +308,7 @@ Ejemplo de respuesta:
 }
 ```
 
-Se utilizan los códigos HTTP correspondientes a cada operación, incluidos `200`, `201`, `204`, `400`, `404`, `409` y `500`.
+Se utilizan los códigos HTTP correspondientes a cada operación, incluidos `200`, `201`, `204`, `400`, `401`, `403`, `404`, `409` y `500`.
 
 ## 9. Eventos
 
@@ -290,16 +320,24 @@ El listener captura los errores del notificador para que un fallo al notificar n
 
 ## 10. Autenticación y permisos
 
-Pendiente de implementación:
+Implementado:
 
-- Registro público.
-- Login.
-- Contraseñas con bcrypt.
-- JWT.
+- Registro público mediante `POST /auth/register`.
+- Login mediante `POST /auth/login`.
+- Contraseñas protegidas con bcrypt.
+- JWT firmado y validado con `jsonwebtoken`.
 - Roles `cliente` y `admin`.
 - Restricción de acceso a reservas propias.
-- Administración de usuarios y películas.
-- Inicialización segura de un administrador.
+- Administración de usuarios y películas exclusiva para `admin`.
+- Inicialización segura de un administrador mediante variables de entorno.
+
+El middleware `authenticate` verifica el JWT y agrega `req.user` con el ID y rol del usuario.
+
+El middleware `authorize` verifica los roles permitidos.
+
+Los casos de uso de reservas utilizan `actor` para verificar la titularidad y aplicar los permisos.
+
+El administrador puede consultar y gestionar todas las reservas. El cliente solo puede operar las suyas.
 
 No se publicarán secretos ni contraseñas en Git.
 
@@ -326,9 +364,17 @@ Se integró OpenAPI 3.1 con Swagger UI en:
 - **Swagger UI:** `http://localhost:8080/api-docs/`
 - **Contrato OpenAPI:** `http://localhost:8080/openapi.json`
 
-Documenta las 16 operaciones de Salud, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
+Documenta las 18 operaciones de Salud, Autenticación, Usuarios, Películas y Reservas con parámetros, cuerpos de petición, ejemplos, códigos HTTP, errores y schemas de respuesta reutilizables mediante `$ref`.
 
-Los schemas Zod de entrada se reutilizan para generar la documentación. Swagger UI permite utilizar _Try it out_ sobre las rutas reales de la API. Las rutas de documentación se montan solamente si `DOCS_ENABLED` está habilitado.
+Los schemas Zod de entrada se reutilizan para generar la documentación.
+
+Swagger UI permite utilizar _Try it out_ sobre las rutas reales de la API y configurar el token JWT mediante **Authorize**.
+
+Las rutas públicas no requieren autenticación. Las protegidas utilizan el esquema `bearerAuth`.
+
+Las rutas de documentación se montan solamente si `DOCS_ENABLED` está habilitado.
+
+Se verificó mediante consola el contrato OpenAPI, los endpoints públicos y protegidos, y los códigos HTTP `200` y `401`.
 
 La comprobación funcional completa de _Try it out_ en ambos modos de persistencia continúa pendiente de QA.
 
@@ -349,17 +395,44 @@ Pruebas completadas durante el desarrollo:
 - Pruebas de Reservas en ambos modos, con solicitudes registradas en consola.
 - Emisión del evento `reserva.creada` en Memory y Sequelize.
 - Comprobación de que un fallo simulado del notificador es capturado por el listener.
-- Comprobación de OpenAPI 3.1, sus 16 operaciones y referencias de schemas.
+- Comprobación de OpenAPI 3.1, sus 18 operaciones y referencias de schemas.
 - Comprobaciones HTTP 200 de Swagger y OpenAPI habilitados y HTTP 404 cuando se deshabilitan explícitamente.
+- Pruebas HTTP de autenticación, reservas propias, errores 401/403/409 y devolución de cupos.
+- Tests automatizados de casos de uso de autenticación, usuarios, películas y reservas.
+
+### Tests automatizados
+
+Los tests utilizan `node:test`, `assert` y DAO Memory.
+
+| Archivo | Pruebas |
+| --- | ---: |
+| `tests/auth.test.js` | 4 |
+| `tests/peliculas.test.js` | 2 |
+| `tests/usuarios.test.js` | 3 |
+| `tests/reservas.test.js` | 5 |
+| **Total** | **14** |
+
+Ejecutar todos desde la raíz:
+
+```bash
+node --test --test-reporter=spec tests/*.test.js
+```
+
+No es necesario iniciar Express ni SQLite.
+
+### Pruebas HTTP
+
+Los archivos de `postman/` permiten ejecutar peticiones desde REST Client.
+
+También se verificó por consola el flujo de reservas con 12 pruebas HTTP, en dos ejecuciones satisfactorias.
 
 Pruebas pendientes:
 
 - Instalación desde un clon limpio.
-- Validación HTTP completa de estados y cupos en ambas persistencias.
+- Verificación HTTP final de estados y cupos alternando explícitamente ambas persistencias.
 - Pruebas de concurrencia y transacciones con peticiones simultáneas.
-- Autenticación y autorización, cuando se implementen.
 - Prueba funcional integral de _Try it out_ desde Swagger UI en ambos modos.
-- «Verificación del comportamiento por defecto según NODE_ENV», hasta que se ejecute esa prueba.
+- Verificación del comportamiento por defecto según `NODE_ENV`.
 
 ## 14. Archivos excluidos del repositorio
 
@@ -375,11 +448,10 @@ El archivo `.env.example` sí debe versionarse.
 
 ## 15. Estado del proyecto
 
-**En desarrollo.**
+**Implementación principal completada. Pendiente de QA final y preparación de entrega.**
 
-Completados: modelos y relaciones, CRUD de Películas, Usuarios y Reservas, persistencia Memory/Sequelize, DAO Factory, Container, eventos y documentación Swagger/OpenAPI integrada.
+Completados: modelos y relaciones, CRUD de Películas, Usuarios y Reservas, persistencia Memory/Sequelize, DAO Factory, Container, eventos, registro, login, bcrypt, JWT, roles, titularidad de reservas, Swagger/OpenAPI con autenticación y tests automatizados.
 
-Pendientes: QA funcional completo, autenticación y permisos
-previstos en el README.
+Pendientes: instalación limpia, verificación final en ambas persistencias, pruebas de concurrencia y validación completa desde Swagger UI.
 
-La rama de trabajo es `develop`. Se realizan integraciones incrementales a `main` después de validar cada fase
+La rama de trabajo es `develop`. Se realizan integraciones incrementales a `main` después de validar cada fase.

@@ -1,52 +1,56 @@
+# Reservas: crear, consultar, cancelar y verificar cupos.
 @baseUrl = http://localhost:8080
-@adminEmail = admin@ort.com
-@adminPassword = admin123
-@clientePassword = cliente123
 
-### 01 - Login administrador
-# @name loginAdmin
+
+### 01 - Login administrador | 200
+# @name admin
+# @prompt password Clave del administrador
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
+  "email": "admin@ort.com",
+  "password": "{{password}}"
 }
 
-### 02 - Registrar cliente
-# @name registroCliente
+
+### 02 - Crear pelicula con 3 lugares | 201
+# @name pelicula
+POST {{baseUrl}}/peliculas
+Authorization: Bearer {{admin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Pelicula Reservas",
+  "fechaProyeccion": "2027-04-20T21:00:00-03:00",
+  "capacidadTotal": 3
+}
+
+
+### 03 - Registrar cliente | 201
+# @name cliente
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "nombre": "Cliente Demo",
-  "email": "cliente.{{$guid}}@ort.com",
-  "password": "{{clientePassword}}"
+  "nombre": "Cliente Reserva",
+  "email": "reserva.{{$guid}}@example.com",
+  "password": "Cliente123"
 }
 
-### 03 - Login cliente
+
+### 04 - Login cliente | 200
 # @name loginCliente
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{registroCliente.response.body.$.email}}",
-  "password": "{{clientePassword}}"
+  "email": "{{cliente.response.body.$.email}}",
+  "password": "Cliente123"
 }
 
-### 04 - Admin crea pelicula
-# @name pelicula
-POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
 
-{
-  "titulo": "Interestelar",
-  "fechaProyeccion": "2027-02-20T21:00:00-03:00",
-  "capacidadTotal": 3
-}
-
-### 05 - Cliente crea reserva
+### 05 - Crear reserva de 2 lugares | 201
 # @name reserva
 POST {{baseUrl}}/reservas
 Authorization: Bearer {{loginCliente.response.body.$.token}}
@@ -57,34 +61,13 @@ Content-Type: application/json
   "cantidad": 2
 }
 
-### 06 - Cliente consulta sus reservas
+
+### 06 - Consultar mis reservas | 200
 GET {{baseUrl}}/reservas
 Authorization: Bearer {{loginCliente.response.body.$.token}}
 
-### 07 - Consultar sin token
-GET {{baseUrl}}/reservas
 
-### 08 - Cliente intenta reservar para otro usuario
-POST {{baseUrl}}/reservas
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "usuarioId": {{loginAdmin.response.body.$.user.id}},
-  "peliculaId": {{pelicula.response.body.$.id}},
-  "cantidad": 1
-}
-
-### 09 - Superar los cupos disponibles
-PUT {{baseUrl}}/reservas/{{reserva.response.body.$.id}}
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "cantidad": 4
-}
-
-### 10 - Cancelar reserva
+### 07 - Cancelar reserva | 200
 PUT {{baseUrl}}/reservas/{{reserva.response.body.$.id}}
 Authorization: Bearer {{loginCliente.response.body.$.token}}
 Content-Type: application/json
@@ -93,9 +76,6 @@ Content-Type: application/json
   "estado": "cancelada"
 }
 
-### 11 - Verificar devolucion de cupos
-GET {{baseUrl}}/peliculas/{{pelicula.response.body.$.id}}
 
-### 12 - Eliminar reserva
-DELETE {{baseUrl}}/reservas/{{reserva.response.body.$.id}}
-Authorization: Bearer {{loginCliente.response.body.$.token}}
+### 08 - Verificar cuposDisponibles = 3 | 200
+GET {{baseUrl}}/peliculas/{{pelicula.response.body.$.id}}

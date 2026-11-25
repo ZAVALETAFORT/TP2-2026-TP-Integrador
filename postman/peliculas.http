@@ -1,182 +1,46 @@
-# Peliculas: CRUD, cupos y permisos - ejecutar en orden.
-# Usar una base de pruebas temporal.
-
+# CRUD de peliculas. Escritura solo administrador.
 @baseUrl = http://localhost:8080
-@adminEmail = admin@ort.com
 
-### 01 - Listado publico | 200
-GET {{baseUrl}}/peliculas
 
-### 02 - Iniciar sesion administrador | 200; token y rol admin
-# @name loginAdmin
-# @prompt password Clave de administrador de .env
+### 01 - Login administrador | 200
+# @name admin
+# @prompt password Clave del administrador
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "{{adminEmail}}",
+  "email": "admin@ort.com",
   "password": "{{password}}"
 }
 
-### 03 - Crear pelicula completa | 201; cupos disponibles=capacidad total
-# @name crearPelicula
+
+### 02 - Crear pelicula | 201
+# @name pelicula
 POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Authorization: Bearer {{admin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "titulo": "Demo Pelicula {{$guid}}",
-  "genero": "Drama",
-  "imagenUrl": "https://example.com/poster.jpg",
+  "titulo": "Matrix",
   "fechaProyeccion": "2027-03-20T21:00:00-03:00",
   "capacidadTotal": 10
 }
 
-### 04 - Consultar pelicula creada | 200; cuposDisponibles=10
-GET {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
 
-### 05 - Actualizar titulo y capacidad | 200; cuposDisponibles=12
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+### 03 - Consultar pelicula (publico) | 200
+GET {{baseUrl}}/peliculas/{{pelicula.response.body.$.id}}
+
+
+### 04 - Modificar capacidad | 200
+PUT {{baseUrl}}/peliculas/{{pelicula.response.body.$.id}}
+Authorization: Bearer {{admin.response.body.$.token}}
 Content-Type: application/json
 
 {
-  "titulo": "Funcion Actualizada",
-  "capacidadTotal": 12
+  "capacidadTotal": 15
 }
 
-### 06 - Actualizar fecha | 200; UTC normalizado
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
 
-{
-  "fechaProyeccion": "2027-03-22T20:00:00-03:00"
-}
-
-### 07 - Crear invalida | 400 VALIDACION_ERROR
-POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "titulo": "",
-  "fechaProyeccion": "fecha-invalida",
-  "capacidadTotal": -10
-}
-
-### 08 - Crear sin campos obligatorios | 400 VALIDACION_ERROR
-POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{}
-
-### 09 - Capacidad de tipo texto | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "capacidadTotal": "20"
-}
-
-### 10 - Capacidad cero | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "capacidadTotal": 0
-}
-
-### 11 - Campo desconocido | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "cuposDisponibles": 99
-}
-
-### 12 - Actualizar sin campos | 400 VALIDACION_ERROR
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-Content-Type: application/json
-
-{}
-
-### 13 - Pelicula inexistente | 404 PELICULA_NOT_FOUND
-GET {{baseUrl}}/peliculas/999999
-
-### 14 - ID invalido | 400 VALIDACION_ERROR
-GET {{baseUrl}}/peliculas/abc
-
-### 15 - Crear pelicula sin token | 401 TOKEN_MISSING
-POST {{baseUrl}}/peliculas
-Content-Type: application/json
-
-{}
-
-### 16 - Modificar pelicula sin token | 401 TOKEN_MISSING
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Content-Type: application/json
-
-{
-  "titulo": "Intrusion"
-}
-
-### 17 - Eliminar pelicula sin token | 401 TOKEN_MISSING
-DELETE {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-
-### 18 - Registrar cliente | 201
-# @name registroCliente
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "nombre": "Cliente Peliculas",
-  "email": "cliente.peliculas.{{$guid}}@example.com",
-  "password": "ClienteDemo123!"
-}
-
-### 19 - Login cliente | 200
-# @name loginCliente
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{registroCliente.response.body.$.email}}",
-  "password": "ClienteDemo123!"
-}
-
-### 20 - Cliente no puede crear pelicula | 403 FORBIDDEN
-POST {{baseUrl}}/peliculas
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
-
-{}
-
-### 21 - Cliente no puede actualizar pelicula | 403 FORBIDDEN
-PUT {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-Content-Type: application/json
-
-{
-  "titulo": "Sin permiso"
-}
-
-### 22 - Cliente no puede borrar pelicula | 403 FORBIDDEN
-DELETE {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginCliente.response.body.$.token}}
-
-### 23 - Admin elimina pelicula | 204
-DELETE {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-### 24 - Pelicula eliminada | 404 PELICULA_NOT_FOUND
-GET {{baseUrl}}/peliculas/{{crearPelicula.response.body.$.id}}
-
-### 25 - Admin limpia usuario | 204
-DELETE {{baseUrl}}/usuarios/{{registroCliente.response.body.$.id}}
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+### 05 - Eliminar pelicula | 204
+DELETE {{baseUrl}}/peliculas/{{pelicula.response.body.$.id}}
+Authorization: Bearer {{admin.response.body.$.token}}
