@@ -32,6 +32,12 @@ const Health = z.strictObject({
   status: z.string(),
 });
 
+// Respuesta del login con JWT y datos públicos del usuario.
+const LoginResponse = z.strictObject({
+  token: z.string(),
+  user: Usuario,
+});
+
 const ErrorResponse = z.strictObject({
   error: z.strictObject({
     code: z.string(),
@@ -47,4 +53,4 @@ const ErrorResponse = z.strictObject({
   }),
 });
 
-export { Usuario, Pelicula, Reserva, Health, ErrorResponse };
+export { Usuario, Pelicula, Reserva, Health, LoginResponse, ErrorResponse };

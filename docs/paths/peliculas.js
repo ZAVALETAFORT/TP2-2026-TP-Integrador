@@ -14,6 +14,7 @@ export default {
       tag,
       id: "getPeliculas",
       summary: "Listar películas",
+      authRequired: false,
       responses: {
         200: json("Películas", arrayOf("Pelicula")),
       },
@@ -40,6 +41,7 @@ export default {
       tag,
       id: "getPelicula",
       summary: "Consultar película",
+      authRequired: false,
       params: idPeliculaSchema,
       responses: {
         200: json("Película", ref("Pelicula")),

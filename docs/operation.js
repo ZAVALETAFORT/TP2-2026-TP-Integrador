@@ -68,6 +68,7 @@ function operation({
   bodyExample,
   responses,
   errors = [],
+  authRequired = true,
 }) {
   const codes = [...errors, "INTERNAL_ERROR"];
 
@@ -77,6 +78,11 @@ function operation({
 
   if (bodySchema) {
     codes.push("INVALID_JSON");
+  }
+
+  // Documenta autenticación y autorización en endpoints protegidos.
+  if (authRequired) {
+    codes.push("TOKEN_MISSING", "TOKEN_INVALID", "TOKEN_EXPIRED", "FORBIDDEN");
   }
 
   const parameters = [
@@ -94,6 +100,9 @@ function operation({
     ...(bodySchema && {
       requestBody: body(bodySchema, { example: bodyExample }),
     }),
+
+    // Las operaciones públicas no heredan la seguridad global.
+    ...(!authRequired && { security: [] }),
 
     responses: {
       ...responses,

@@ -6,9 +6,10 @@ export default {
       tag: "Salud",
       id: "getHealth",
       summary: "Comprobar estado del servidor",
+      authRequired: false,
       responses: {
-        200: json("Estado del servidor", ref("Health"))
-      }
-    })
-  }
+        200: json("Estado del servidor", ref("Health")),
+      },
+    }),
+  },
 };
