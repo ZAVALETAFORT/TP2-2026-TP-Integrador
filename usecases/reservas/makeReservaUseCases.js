@@ -13,17 +13,18 @@ function makeReservaUseCases({
 }) {
   return {
     // Lista reservas.
-    getReservas: (filters) =>
-      getReservas(filters, reservasDao),
+    getReservas: (filters, actor) =>
+      getReservas(filters, actor, reservasDao),
 
     // Consulta una reserva por ID.
-    getReservaById: (id) =>
-      getReservaById(id, reservasDao),
+    getReservaById: (id, actor) =>
+      getReservaById(id, actor, reservasDao),
 
     // Crea reservas y permite emitir el evento correspondiente.
-    createReserva: (data) =>
+    createReserva: (data, actor) =>
       createReserva(
         data,
+        actor,
         reservasDao,
         peliculasDao,
         usuariosDao,
@@ -31,12 +32,12 @@ function makeReservaUseCases({
       ),
 
     // Modifica la cantidad o cancela.
-    updateReserva: (id, changes) =>
-      updateReserva(id, changes, reservasDao),
+    updateReserva: (id, changes, actor) =>
+      updateReserva(id, changes, actor, reservasDao),
 
     // Elimina una reserva.
-    deleteReserva: (id) =>
-      deleteReserva(id, reservasDao)
+    deleteReserva: (id, actor) =>
+      deleteReserva(id, actor, reservasDao)
   };
 }
 

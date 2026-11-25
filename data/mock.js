@@ -135,10 +135,12 @@ async function seedMockData({
   peliculasUseCases,
   reservasUseCases,
 }) {
+
+  const actor = { rol: "admin" };
   const [usuarios, peliculas, reservas] = await Promise.all([
     usuariosUseCases.getUsuarios(),
     peliculasUseCases.getPeliculas(),
-    reservasUseCases.getReservas(),
+    reservasUseCases.getReservas({}, actor),
   ]);
 
   // No modificar ni mezclar datos de una base ya utilizada.
@@ -181,11 +183,11 @@ async function seedMockData({
           usuarioId: usuariosCreados[indiceUsuario].id,
           peliculaId: peliculasCreadas[i].id,
           cantidad,
-        });
+        }, actor);
         if (estado === "cancelada") {
           await reservasUseCases.updateReserva(reserva.id, {
             estado: "cancelada",
-          });
+          }, actor);
           canceladas++;
         }
         total++;

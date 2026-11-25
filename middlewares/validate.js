@@ -29,6 +29,14 @@ function validate(schema, target = "body") {
       Object.assign(req.params, result.data);
     }
 
+    if (target === "query") {
+      Object.defineProperty(req, "query", {
+        value: result.data,
+        writable: true,
+        configurable: true,
+      });
+    }
+
     next();
   };
 }
@@ -36,6 +44,5 @@ function validate(schema, target = "body") {
 //Valido los parametros de la URL
 const validateParams = (schema) => validate(schema, "params");
 export { validateParams };
-
 
 export default validate;

@@ -7,17 +7,18 @@ class ReservasController {
   constructor(useCases) {
     this.#useCases = useCases;
   }
-
+//LIST
   // Devuelve todas las reservas o las que coincidan con los filtros.
   list = async (req, res) => {
-    const reservas = await this.#useCases.getReservas(req.query);
+    const reservas = await this.#useCases.getReservas(req.query, req.user);
 
     res.json(reservas);
   };
 
+  //GET
   // Busca una reserva por ID y responde 404 si no existe.
   get = async (req, res) => {
-    const reserva = await this.#useCases.getReservaById(req.params.id);
+    const reserva = await this.#useCases.getReservaById(req.params.id, req.user);
 
     if (!reserva) {
       throw new AppError(
@@ -30,16 +31,18 @@ class ReservasController {
     res.json(reserva);
   };
 
+  //CREATE
   // Crea una reserva y responde HTTP 201.
   create = async (req, res) => {
-    const reserva = await this.#useCases.createReserva(req.body);
+    const reserva = await this.#useCases.createReserva(req.body, req.user);
 
     res.status(201).json(reserva);
   };
 
+  //UPDATE
   // Modifica la cantidad o cancela una reserva.
   update = async (req, res) => {
-    const reserva = await this.#useCases.updateReserva(req.params.id, req.body);
+    const reserva = await this.#useCases.updateReserva(req.params.id, req.body, req.user);
 
     if (!reserva) {
       throw new AppError(

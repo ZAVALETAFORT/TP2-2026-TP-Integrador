@@ -4,11 +4,25 @@ import EVENTS from "../../events/eventNames.js";
 // Valida las reglas del negocio, crea la reserva y emite el evento.
 async function createReserva(
   data,
+  actor,
   reservasDao,
   peliculasDao,
   usuariosDao,
   events,
 ) {
+
+  // Si no se especifica usuarioId, se asume el del actor.
+  const usuarioId = data.usuarioId ?? actor.id;
+
+  if (actor.rol !== "admin" && usuarioId !== actor.id) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Solo podés crear reservas a tu nombre",
+      403,
+    );
+  }
+  data = { ...data, usuarioId };
+
   // Comprueba que la cantidad sea válida.
   if (!Number.isSafeInteger(data.cantidad) || data.cantidad <= 0) {
     throw new AppError(

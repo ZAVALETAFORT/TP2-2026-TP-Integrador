@@ -10,23 +10,24 @@ import {
 } from "../schemas/reservaSchemas.js";
 
 // Relaciona cada endpoint con su validación y función del Controller.
-function createReservasRoutes(controller) {
+function createReservasRoutes(controller, { authenticate }) {
   const router = Router();
 
-  router.get("/", validate(reservaQuerySchema, "query"), controller.list);
+  router.get("/", authenticate, validate(reservaQuerySchema, "query"), controller.list);
 
-  router.get("/:id", validateParams(idReservaSchema), controller.get);
+  router.get("/:id", authenticate, validateParams(idReservaSchema), controller.get);
 
-  router.post("/", validate(crearReservaSchema), controller.create);
+  router.post("/", authenticate, validate(crearReservaSchema), controller.create);
 
   router.put(
     "/:id",
+    authenticate,
     validateParams(idReservaSchema),
     validate(actualizarReservaSchema),
     controller.update,
   );
 
-  router.delete("/:id", validateParams(idReservaSchema), controller.remove);
+  router.delete("/:id", authenticate, validateParams(idReservaSchema), controller.remove);
 
   return router;
 }

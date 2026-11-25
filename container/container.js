@@ -135,7 +135,7 @@ async function buildContainer() {
   router.use("/health", healthRoutes);
   router.use("/peliculas", createPeliculasRoutes(peliculasController, auth));
   router.use("/usuarios", createUsuariosRoutes(usuariosController, auth));
-  router.use("/reservas", createReservasRoutes(reservasController));
+  router.use("/reservas", createReservasRoutes(reservasController, auth));
   router.use("/auth", createAuthRoutes(authController));
 
   // Publica Swagger y OpenAPI cuando la docu está habilitada.

@@ -7,7 +7,7 @@ const idReservaSchema = z.object({
 
 // Exige usuario, película y cantidad válida para crear una reserva.
 const crearReservaSchema = z.strictObject({
-  usuarioId: z.number().int().positive(),
+  usuarioId: z.number().int().positive().optional(), //Lo saco del token
   peliculaId: z.number().int().positive(),
   cantidad: z.number().int().positive(),
 });

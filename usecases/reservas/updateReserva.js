@@ -1,8 +1,9 @@
 import AppError from "../../errors/AppError.js";
+import getReservaById from "./getReservaById.js";
 
 // Decide si se cambia la cantidad o se cancela la reserva.
-async function updateReserva(id, changes, dao) {
-  const reserva = await dao.getById(id);
+async function updateReserva(id, changes, actor, dao) {
+  const reserva = await getReservaById(id, actor, dao);
 
   if (!reserva) return null;
 
@@ -14,7 +15,7 @@ async function updateReserva(id, changes, dao) {
     throw new AppError(
       "RESERVA_NO_ACTIVA",
       "No se puede modificar una reserva cancelada",
-      409
+      409,
     );
   }
 
